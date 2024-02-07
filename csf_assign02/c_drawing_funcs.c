@@ -9,7 +9,58 @@
 // Helper functions
 ////////////////////////////////////////////////////////////////////////
 
-// TODO: implement helper functions
+int32_t in_bounds(struct Image *img, int32_t x, int32_t y) {
+    return x >= 0 && y >= 0 && x < img->width && y < img->height;
+}
+
+uint32_t compute_index(struct Image *img, int32_t x, int32_t y) {
+    return y * img->width + x;
+}
+
+int32_t clamp(int32_t val, int32_t min, int32_t max) {
+    if (val < min) return min;
+    if (val > max) return max;
+    return val;
+}
+
+uint8_t get_r(uint32_t color) {
+    return (color >> 24) & 0xFF;
+}
+
+uint8_t get_g(uint32_t color) {
+    return (color >> 16) & 0xFF;
+}
+
+uint8_t get_b(uint32_t color) {
+    return (color >> 8) & 0xFF;
+}
+
+uint8_t get_a(uint32_t color) {
+    return color & 0xFF;
+}
+
+uint8_t blend_components(uint32_t fg, uint32_t bg, uint32_t alpha) {
+    return (alpha * fg + (255 - alpha) * bg) / 255;
+}
+
+uint32_t blend_colors(uint32_t fg, uint32_t bg) {
+    uint8_t r = blend_components(get_r(fg), get_r(bg), get_a(fg));
+    uint8_t g = blend_components(get_g(fg), get_g(bg), get_a(fg));
+    uint8_t b = blend_components(get_b(fg), get_b(bg), get_a(fg));
+    return (r << 24) | (g << 16) | (b << 8) | 0xFF;
+}
+
+void set_pixel(struct Image *img, uint32_t index, uint32_t color) {
+    img->data[index] = blend_colors(color, img->data[index]);
+}
+
+int64_t square(int64_t x) {
+    return x * x;
+}
+
+int64_t square_dist(int64_t x1, int64_t y1, int64_t x2, int64_t y2) {
+    return square(x1 - x2) + square(y1 - y2);
+}
 
 ////////////////////////////////////////////////////////////////////////
 // API functions
@@ -25,7 +76,9 @@
 //   color - uint32_t color value
 //
 void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
-  // TODO: implement
+if (!in_bounds(img, x, y)) return;
+    uint32_t index = compute_index(img, x, y);
+    set_pixel(img, index, color);
 }
 
 //
@@ -41,7 +94,17 @@ void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
 void draw_rect(struct Image *img,
                const struct Rect *rect,
                uint32_t color) {
-  // TODO: implement
+  int32_t x, y, x_end, y_end;
+    x = clamp(rect->x, 0, img->width - 1);
+    y = clamp(rect->y, 0, img->height - 1);
+    x_end = clamp(rect->x + rect->width, 0, img->width);
+    y_end = clamp(rect->y + rect->height, 0, img->height);
+
+    for (int32_t i = y; i < y_end; ++i) {
+        for (int32_t j = x; j < x_end; ++j) {
+            draw_pixel(img, j, i, color);
+        }
+    }
 }
 
 //
@@ -58,7 +121,12 @@ void draw_rect(struct Image *img,
 void draw_circle(struct Image *img,
                  int32_t x, int32_t y, int32_t r,
                  uint32_t color) {
-  // TODO: implement
+  for (int32_t i = y - r; i <= y + r; ++i) {
+        for (int32_t j = x - r; j <= x + r; ++j) {
+            if (square_dist(j, i, x, y) <= square(r))
+                draw_pixel(img, j, i, color);
+        }
+    }
 }
 
 //
@@ -79,7 +147,16 @@ void draw_tile(struct Image *img,
                int32_t x, int32_t y,
                struct Image *tilemap,
                const struct Rect *tile) {
- // TODO: implement
+ if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
+        return;
+
+    for (int32_t i = 0; i < tile->height; ++i) {
+        for (int32_t j = 0; j < tile->width; ++j) {
+            uint32_t tile_index = (tile->y + i) * tilemap->width + (tile->x + j);
+            uint32_t dest_index = (y + i) * img->width + (x + j);
+            img->data[dest_index] = tilemap->data[tile_index];
+        }
+    }
 }
 
 //
@@ -101,5 +178,14 @@ void draw_sprite(struct Image *img,
                  int32_t x, int32_t y,
                  struct Image *spritemap,
                  const struct Rect *sprite) {
-  // TODO: implement
+  if (sprite->x < 0 || sprite->y < 0 || sprite->x + sprite->width > spritemap->width || sprite->y + sprite->height > spritemap->height)
+        return;
+
+    for (int32_t i = 0; i < sprite->height; ++i) {
+        for (int32_t j = 0; j < sprite->width; ++j) {
+            uint32_t sprite_index = (sprite->y + i) * spritemap->width + (sprite->x + j);
+            uint32_t dest_index = (y + i) * img->width + (x + j);
+            img->data[dest_index] = blend_colors(spritemap->data[sprite_index], img->data[dest_index]);
+        }
+    }
 }
