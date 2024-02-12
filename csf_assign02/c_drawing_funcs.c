@@ -9,19 +9,25 @@
 // Helper functions
 ////////////////////////////////////////////////////////////////////////
 
+//Ensure that x is >0 and < img.width
+//Ensure that y is >0 and < img.height
 int32_t in_bounds(struct Image *img, int32_t x, int32_t y) {
     return x >= 0 && y >= 0 && x < img->width && y < img->height;
 }
+
 
 uint32_t compute_index(struct Image *img, int32_t x, int32_t y) {
     return y * img->width + x;
 }
 
-int32_t clamp(int32_t val, int32_t min, int32_t max) {
+//No Need for clamp
+/*int32_t clamp(int32_t val, int32_t min, int32_t max) {
     if (val < min) return min;
     if (val > max) return max;
     return val;
 }
+*/
+
 
 uint8_t get_r(uint32_t color) {
     return (color >> 24) & 0xFF;
@@ -76,7 +82,7 @@ int64_t square_dist(int64_t x1, int64_t y1, int64_t x2, int64_t y2) {
 //   color - uint32_t color value
 //
 void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
-if (!in_bounds(img, x, y)) return;
+    if (!in_bounds(img, x, y)) return;
     uint32_t index = compute_index(img, x, y);
     set_pixel(img, index, color);
 }
@@ -95,10 +101,11 @@ void draw_rect(struct Image *img,
                const struct Rect *rect,
                uint32_t color) {
   int32_t x, y, x_end, y_end;
-    x = clamp(rect->x, 0, img->width - 1);
-    y = clamp(rect->y, 0, img->height - 1);
-    x_end = clamp(rect->x + rect->width, 0, img->width);
-    y_end = clamp(rect->y + rect->height, 0, img->height);
+    //No need for clamp
+    //x = clamp(rect->x, 0, img->width - 1);
+    //y = clamp(rect->y, 0, img->height - 1);
+    //x_end = clamp(rect->x + rect->width, 0, img->width);
+    //y_end = clamp(rect->y + rect->height, 0, img->height);
 
     for (int32_t i = y; i < y_end; ++i) {
         for (int32_t j = x; j < x_end; ++j) {
@@ -147,7 +154,7 @@ void draw_tile(struct Image *img,
                int32_t x, int32_t y,
                struct Image *tilemap,
                const struct Rect *tile) {
- if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
+    if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
         return;
 
     for (int32_t i = 0; i < tile->height; ++i) {
@@ -178,7 +185,7 @@ void draw_sprite(struct Image *img,
                  int32_t x, int32_t y,
                  struct Image *spritemap,
                  const struct Rect *sprite) {
-  if (sprite->x < 0 || sprite->y < 0 || sprite->x + sprite->width > spritemap->width || sprite->y + sprite->height > spritemap->height)
+    if (sprite->x < 0 || sprite->y < 0 || sprite->x + sprite->width > spritemap->width || sprite->y + sprite->height > spritemap->height)
         return;
 
     for (int32_t i = 0; i < sprite->height; ++i) {
