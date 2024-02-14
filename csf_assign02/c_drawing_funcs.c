@@ -53,11 +53,11 @@ uint32_t blend_colors(uint32_t fg, uint32_t bg) {
     uint8_t r = blend_components(get_r(fg), get_r(bg), get_a(fg));
     uint8_t g = blend_components(get_g(fg), get_g(bg), get_a(fg));
     uint8_t b = blend_components(get_b(fg), get_b(bg), get_a(fg));
-    return (r << 24) | (g << 16) | (b << 8) | 0xFF;
+    return (r << 24) | (g << 16) | (b << 8) | 0xFF;   // We set alpha to 255 (fully opaque)
 }
 
 void set_pixel(struct Image *img, uint32_t index, uint32_t color) {
-    img->data[index] = blend_colors(color, img->data[index]);
+    img->data[index] = blend_colors(color, img->data[index]);    
 }
 
 int64_t square(int64_t x) {
@@ -97,10 +97,15 @@ void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
 //   rect    - pointer to struct Rect
 //   color   - uint32_t color value
 //
+
+
+/*
+Not Sure what your doing here so I commented it out. How are x, y, and xend, yend being initialized?
+I reimplemented under. I think yours might be more optimal just not sure what your doing. 
 void draw_rect(struct Image *img,
                const struct Rect *rect,
                uint32_t color) {
-  int32_t x, y, x_end, y_end;
+  int32_t x, y, x_end, y_end;  
     //No need for clamp
     //x = clamp(rect->x, 0, img->width - 1);
     //y = clamp(rect->y, 0, img->height - 1);
@@ -110,6 +115,15 @@ void draw_rect(struct Image *img,
     for (int32_t i = y; i < y_end; ++i) {
         for (int32_t j = x; j < x_end; ++j) {
             draw_pixel(img, j, i, color);
+        }
+    }
+}
+*/
+
+void draw_rect(struct Image *img, const struct Rect *rect, uint32_t color) {
+    for (int32_t y = rect->y; y < rect->y + rect->height; ++y) {
+        for (int32_t x = rect->x; x < rect->x + rect->width; ++x) {
+            draw_pixel(img, x, y, color);
         }
     }
 }
@@ -125,6 +139,8 @@ void draw_rect(struct Image *img,
 //   r       - radius of circle
 //   color   - uint32_t color value
 //
+
+// we may need to use clamp here. Ill test and see. 
 void draw_circle(struct Image *img,
                  int32_t x, int32_t y, int32_t r,
                  uint32_t color) {
@@ -150,12 +166,15 @@ void draw_circle(struct Image *img,
 //   tilemap - pointer to Image (the tilemap)
 //   tile    - pointer to Rect (the tile)
 //
+
+
+// This is really beautiful code, well done man 
 void draw_tile(struct Image *img,
                int32_t x, int32_t y,
                struct Image *tilemap,
                const struct Rect *tile) {
     if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
-        return;
+        return;     // Check if tile bounds are outside the tilemap
 
     for (int32_t i = 0; i < tile->height; ++i) {
         for (int32_t j = 0; j < tile->width; ++j) {
