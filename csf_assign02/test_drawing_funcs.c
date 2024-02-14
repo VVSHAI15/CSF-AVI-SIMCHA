@@ -327,7 +327,7 @@ void test_color_components() {
   ASSERT(get_b(yellow) == 0x00);
   ASSERT(get_a(yellow) == 0xFF);
 
-  uint32_t cyan = 0x80FFFF00; // Semi-transparent cyan (R=0, G=255, B=255, A=128)
+  uint32_t cyan = 0x00FFFF80; // Semi-transparent cyan (R=0, G=255, B=255, A=128)
   ASSERT(get_r(cyan) == 0x00);
   ASSERT(get_g(cyan) == 0xFF);
   ASSERT(get_b(cyan) == 0xFF);
@@ -335,7 +335,7 @@ void test_color_components() {
 
 
   // Test alpha with a fully transparent color
-  uint32_t transparent = 0x00FFFFFF; // Transparent color
+  uint32_t transparent = 0xFFFFFF00; // Transparent color
   ASSERT(get_a(transparent) == 0x00); // Alpha transparency
 }
 
@@ -346,33 +346,35 @@ void test_blend_components() {
   // Test fully transparent foreground
   ASSERT(blend_components(0, 100, 0) == 100); // Transparent foreground
   
-  // Test equal blending
-  ASSERT(blend_components(100, 200, 128) == 150); // 50% blend
+  // 50% opacity
+  ASSERT(blend_components(255, 0, 128) == 128);
+  ASSERT(blend_components(0, 255, 128) == 127);
 
-  // Testing with different opacity levels to see the blending effect.
-  ASSERT(blend_components(255, 0, 25) == 63);
-  ASSERT(blend_components(255, 0, 230) == 204);
+  // Different opacity levels
+  ASSERT(blend_components(255, 0, 25) == 25);
+  ASSERT(blend_components(255, 0, 230) == 230);
   ASSERT(blend_components(0, 255, 51) == 204);
-  ASSERT(blend_components(255, 128, 204) == 223);
-
 }
 
 void test_blend_colors() {
   // Fully opaque foreground over any background should result in the foreground color.
   ASSERT(blend_colors(0xFF0000FF, 0x00FF00FF) == 0xFF0000FF);
   
-  // Fully transparent foreground should result in the background color.
-  ASSERT(blend_colors(0x00FF0080, 0xFF0000FF) == 0xFF0000FF);
+  // Fully transparent foreground should result in the background color.  
+  ASSERT(blend_colors(0x00FF0000, 0xFF0000FF) == 0xFF0000FF);
+
+  // 50% transparent white over black should result in mid-gray with full opacity
+  uint32_t result = blend_colors(0xFFFFFF80, 0x000000FF); 
+  ASSERT(result == 0x808080FF);
+
+  // We blend semi Opaque blue into fully opaque red. This should result in a purplish tint.
+  result = blend_colors(0x0000FF40, 0xFF0000FF);
   
-  // 50% transparent white (0x80FFFFFF) over black (0x000000FF) should result in a gray.
-  uint32_t result = blend_colors(0x80FFFFFF, 0x000000FF);
-  ASSERT((result & 0x00FFFFFF) == 0x808080);
-  
-  // Testing with custom alpha to ensure proper blending
-  // 25% opaque blue (0x400000FF) over full red (0xFF0000FF) should blend towards purple but still close to red
-  result = blend_colors(0x400000FF, 0xFF0000FF);
-  // Check if the blue component is blended correctly; red and green should not change much
-  ASSERT((result & 0xFF) > 0 && (result >> 24) > 0);
+  // Check if the blue component is blended correctly; the result should have more than 0 blue.
+  ASSERT((result & 0x0000FF00) > 0);
+
+  // Since we're blending a semi-transparent color over an opaque one, check if the result is indeed opaque.
+  ASSERT((result & 0x000000FF) == 0x000000FF);
 }
 
 void test_set_pixel() {
