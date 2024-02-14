@@ -89,6 +89,7 @@ void test_color_components();
 void  test_blend_components();
 void  test_blend_colors();
 void test_set_pixel();
+void test_square_dist();
 
 int main(int argc, char **argv) {
   if (argc > 1) {
@@ -113,6 +114,7 @@ int main(int argc, char **argv) {
   TEST(test_blend_components);
   TEST(test_blend_colors);
   TEST(test_set_pixel);
+  TEST(test_square_dist);
 
   TEST_FINI();
 }
