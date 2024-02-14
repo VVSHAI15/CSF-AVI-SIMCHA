@@ -86,9 +86,10 @@ void test_draw_sprite(TestObjs *objs);
 void test_in_bounds();
 void test_compute_index();
 void test_color_components();
-void  test_blend_components();
-void  test_blend_colors();
+void test_blend_components();
+void test_blend_colors();
 void test_set_pixel();
+void test_square();
 void test_square_dist();
 
 int main(int argc, char **argv) {
@@ -114,6 +115,7 @@ int main(int argc, char **argv) {
   TEST(test_blend_components);
   TEST(test_blend_colors);
   TEST(test_set_pixel);
+  TEST(test_square);
   TEST(test_square_dist);
 
   TEST_FINI();
@@ -396,6 +398,25 @@ void test_set_pixel() {
   ASSERT(img.data[1] == 0xFF0000FF);
 }
 
+
+void test_square() {
+  // Test with zero
+  ASSERT(square(0) == 0);
+
+  // Test with positive numbers
+  ASSERT(square(1) == 1);
+  ASSERT(square(10) == 100);
+  ASSERT(square(123) == 15129);
+
+  // Test with negative numbers
+  ASSERT(square(-1) == 1);
+  ASSERT(square(-10) == 100);
+  ASSERT(square(-123) == 15129);
+
+  // Test with large values
+  ASSERT(square(100000) == 10000000000LL);
+  ASSERT(square(-100000) == 10000000000LL);
+}
 
 void test_square_dist() {
   // Test with points at the same location
