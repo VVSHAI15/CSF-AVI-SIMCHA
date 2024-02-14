@@ -83,6 +83,12 @@ void test_draw_circle(TestObjs *objs);
 void test_draw_circle_clip(TestObjs *objs);
 void test_draw_tile(TestObjs *objs);
 void test_draw_sprite(TestObjs *objs);
+void test_in_bounds();
+void test_compute_index();
+void test_color_components();
+void  test_blend_components();
+void  test_blend_colors();
+void test_set_pixel();
 
 int main(int argc, char **argv) {
   if (argc > 1) {
