@@ -393,3 +393,24 @@ void test_set_pixel() {
   set_pixel(&img, 1, 0xFF0000FF);
   ASSERT(img.data[1] == 0xFF0000FF);
 }
+
+
+void test_square_dist() {
+  // Test with points at the same location
+  ASSERT(square_dist(0, 0, 0, 0) == 0);
+
+  // Test with points on the x-axis
+  ASSERT(square_dist(-1, 0, 1, 0) == 4);
+
+  // Test with points on the y-axis
+  ASSERT(square_dist(0, -1, 0, 1) == 4);
+
+  // Test with points diagonally placed
+  ASSERT(square_dist(-1, -1, 1, 1) == 8);
+
+  // Test with large values
+  ASSERT(square_dist(100000, 100000, -100000, -100000) == 80000000000LL);
+
+  // Test with mixed positive and negative values
+  ASSERT(square_dist(-3, 4, 0, 0) == 25);
+}

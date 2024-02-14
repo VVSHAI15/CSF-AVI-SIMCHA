@@ -99,27 +99,6 @@ void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
 //
 
 
-/*
-Not Sure what your doing here so I commented it out. How are x, y, and xend, yend being initialized?
-I reimplemented under. I think yours might be more optimal just not sure what your doing. 
-void draw_rect(struct Image *img,
-               const struct Rect *rect,
-               uint32_t color) {
-  int32_t x, y, x_end, y_end;  
-    //No need for clamp
-    //x = clamp(rect->x, 0, img->width - 1);
-    //y = clamp(rect->y, 0, img->height - 1);
-    //x_end = clamp(rect->x + rect->width, 0, img->width);
-    //y_end = clamp(rect->y + rect->height, 0, img->height);
-
-    for (int32_t i = y; i < y_end; ++i) {
-        for (int32_t j = x; j < x_end; ++j) {
-            draw_pixel(img, j, i, color);
-        }
-    }
-}
-*/
-
 void draw_rect(struct Image *img, const struct Rect *rect, uint32_t color) {
     for (int32_t y = rect->y; y < rect->y + rect->height; ++y) {
         for (int32_t x = rect->x; x < rect->x + rect->width; ++x) {
