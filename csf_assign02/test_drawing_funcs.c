@@ -100,6 +100,14 @@ int main(int argc, char **argv) {
   TEST(test_draw_tile);
   TEST(test_draw_sprite);
 
+// Tests for helper functions. 
+  TEST(test_in_bounds);
+  TEST(test_compute_index);
+  TEST(test_color_components);
+  TEST(test_blend_components);
+  TEST(test_blend_colors);
+  TEST(test_set_pixel);
+
   TEST_FINI();
 }
 
@@ -261,4 +269,119 @@ void test_draw_sprite(TestObjs *objs) {
   };
 
   check_picture(&objs->large, &pic);
+}
+
+void test_in_bounds() {
+  struct Image img = {100, 100, NULL}; // Test image of size 100x100
+  
+  // Test corners
+  ASSERT(in_bounds(&img, 0, 0)); 
+  ASSERT(in_bounds(&img, 99, 99)); 
+  ASSERT(!in_bounds(&img, 100, 0)); 
+  ASSERT(!in_bounds(&img, 0, 100)); 
+  
+  // Test beyond corners
+  ASSERT(!in_bounds(&img, -1, 0)); 
+  ASSERT(!in_bounds(&img, 0, -1)); 
+  ASSERT(!in_bounds(&img, 100, 100)); 
+  
+  // Test middle
+  ASSERT(in_bounds(&img, 50, 50)); 
+}
+
+void test_compute_index() {
+  struct Image img = {100, 100, NULL}; // Test image of size 100x100
+  
+  // Test first row
+  ASSERT(compute_index(&img, 1, 0) == 1); // Second pixel, first row
+  
+  // Test second row
+  ASSERT(compute_index(&img, 0, 1) == 100); // First pixel, second row
+  
+  // Test last row
+  ASSERT(compute_index(&img, 0, 99) == 9900); // First pixel, last row
+  
+  // Test random middle
+  ASSERT(compute_index(&img, 50, 50) == 5050); // Middle pixel 
+
+}
+
+void test_color_components() {
+  // Test with a fully opaque white
+  uint32_t white = 0xFFFFFFFF; // White color
+  ASSERT(get_r(white) == 0xFF); // Red
+  ASSERT(get_g(white) == 0xFF); // Green
+  ASSERT(get_b(white) == 0xFF); // Blue
+  ASSERT(get_a(white) == 0xFF); // Alpha
+  
+
+  uint32_t yellow = 0xFFFF00FF; // Solid yellow (R=255, G=255, B=0, A=255)
+  ASSERT(get_r(yellow) == 0xFF);
+  ASSERT(get_g(yellow) == 0xFF);
+  ASSERT(get_b(yellow) == 0x00);
+  ASSERT(get_a(yellow) == 0xFF);
+
+  uint32_t cyan = 0x80FFFF00; // Semi-transparent cyan (R=0, G=255, B=255, A=128)
+  ASSERT(get_r(cyan) == 0x00);
+  ASSERT(get_g(cyan) == 0xFF);
+  ASSERT(get_b(cyan) == 0xFF);
+  ASSERT(get_a(cyan) == 0x80);
+
+
+  // Test alpha with a fully transparent color
+  uint32_t transparent = 0x00FFFFFF; // Transparent color
+  ASSERT(get_a(transparent) == 0x00); // Alpha transparency
+}
+
+void test_blend_components() {
+  // Test fully opaque foreground
+  ASSERT(blend_components(255, 100, 255) == 255); // Opaque foreground
+  
+  // Test fully transparent foreground
+  ASSERT(blend_components(0, 100, 0) == 100); // Transparent foreground
+  
+  // Test equal blending
+  ASSERT(blend_components(100, 200, 128) == 150); // 50% blend
+
+  // Testing with different opacity levels to see the blending effect.
+  ASSERT(blend_components(255, 0, 25) == 63);
+  ASSERT(blend_components(255, 0, 230) == 204);
+  ASSERT(blend_components(0, 255, 51) == 204);
+  ASSERT(blend_components(255, 128, 204) == 223);
+
+}
+
+void test_blend_colors() {
+  // Fully opaque foreground over any background should result in the foreground color.
+  ASSERT(blend_colors(0xFF0000FF, 0x00FF00FF) == 0xFF0000FF);
+  
+  // Fully transparent foreground should result in the background color.
+  ASSERT(blend_colors(0x00FF0080, 0xFF0000FF) == 0xFF0000FF);
+  
+  // 50% transparent white (0x80FFFFFF) over black (0x000000FF) should result in a gray.
+  uint32_t result = blend_colors(0x80FFFFFF, 0x000000FF);
+  ASSERT((result & 0x00FFFFFF) == 0x808080);
+  
+  // Testing with custom alpha to ensure proper blending
+  // 25% opaque blue (0x400000FF) over full red (0xFF0000FF) should blend towards purple but still close to red
+  result = blend_colors(0x400000FF, 0xFF0000FF);
+  // Check if the blue component is blended correctly; red and green should not change much
+  ASSERT((result & 0xFF) > 0 && (result >> 24) > 0);
+}
+
+void test_set_pixel() {
+  // Small test image
+  struct Image img;
+  img.width = 2;
+  img.height = 2;
+  uint32_t data[4] = {0xFFFFFFFF, 0x000000FF, 0xFF0000FF, 0x0000FFFF}; // White, Black, Red, Blue
+  img.data = data;
+
+  // Set a semi-transparent green over the first pixel (white), should result in lighter green
+  set_pixel(&img, 0, 0x80FF0080);
+  ASSERT(img.data[0] != 0xFFFFFFFF);
+  
+  // Overwrite the second pixel (black) with fully opaque red, should be red
+  set_pixel(&img, 1, 0xFF0000FF);
+  ASSERT(img.data[1] == 0xFF0000FF);
 }
