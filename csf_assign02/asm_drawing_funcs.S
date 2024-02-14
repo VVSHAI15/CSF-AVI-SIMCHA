@@ -22,6 +22,46 @@
  ***********************************************************************/
 
 /* TODO: implement your helper functions here */
+/* Function in_bounds
+ * Ensure that variables x and y fall within the given bounds of the image
+ *
+ * Parameters:
+ *   %rdi     - pointer to struct Image
+ *   %esi     - x coordinate (pixel column)
+ *   %edx     - y coordinate (pixel row)
+ *
+ * Returns:
+ *   %rax - 1 if coordinates are within bounds, 0 if fail
+ */
+
+/*
+ .global in_bounds
+ 
+ in_bounds
+	pushq	%rbp 
+	mov		%rbp, %rsp
+ 	mov		%rax, [%rdi + IMAGE_WIDTH_OFFSET]  //image now pointing to wdith
+ 	cmp		%edx, 0		//compare y to 0
+ 	jl		.out_of_bounds		//jump to out_of_bounds if y < 0
+ 	cmp		%esi, 0
+ 	jl		.out_of_bounds
+ 	cmp		%edx, %rax		//comparing y to image width
+ 	jge		.out_of_bounds  //Jump if y >= img->width
+ 	mov     %rax, [%rdi + IMAGE_HEIGHT_OFFSET] //image now pointing to heighgt
+	cmp     %esi, %rax
+	jge		.out_of_bounds
+	mov     %rax, 1
+ 	jmp     .done
+ 
+  .out_of_bounds:
+    mov     %rax, 0
+
+.done
+	popq	%rbp
+	ret
+
+*/
+
 
 /***********************************************************************
    Public API functions
