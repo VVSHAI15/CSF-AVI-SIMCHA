@@ -155,14 +155,20 @@ void draw_tile(struct Image *img,
     if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
         return;     // Check if tile bounds are outside the tilemap
 
+
     for (int32_t i = 0; i < tile->height; ++i) {
+        int32_t destY = y + i;
+        if (destY < 0 || destY >= img->height) continue; // Skip rows outside the destination image
         for (int32_t j = 0; j < tile->width; ++j) {
+            int32_t destX = x + j;
+            if (destX < 0 || destX >= img->width) continue; // Skip columns outside the destination image
             uint32_t tile_index = (tile->y + i) * tilemap->width + (tile->x + j);
-            uint32_t dest_index = (y + i) * img->width + (x + j);
+            uint32_t dest_index = destY * img->width + destX;
             img->data[dest_index] = tilemap->data[tile_index];
         }
     }
 }
+
 
 //
 // Draw a sprite by copying all pixels in the region
@@ -187,9 +193,14 @@ void draw_sprite(struct Image *img,
         return;
 
     for (int32_t i = 0; i < sprite->height; ++i) {
+        int32_t destY = y + i;
+        if (destY < 0 || destY >= img->height) continue; // Skip rows outside the destination image
         for (int32_t j = 0; j < sprite->width; ++j) {
+            int32_t destX = x + j;
+            if (destX < 0 || destX >= img->width) continue; // Skip columns outside the destination image
             uint32_t sprite_index = (sprite->y + i) * spritemap->width + (sprite->x + j);
-            uint32_t dest_index = (y + i) * img->width + (x + j);
+            uint32_t dest_index = destY * img->width + destX;
+            // Blend only if within bounds
             img->data[dest_index] = blend_colors(spritemap->data[sprite_index], img->data[dest_index]);
         }
     }
