@@ -20,15 +20,6 @@ uint32_t compute_index(struct Image *img, int32_t x, int32_t y) {
     return y * img->width + x;
 }
 
-//No Need for clamp
-/*int32_t clamp(int32_t val, int32_t min, int32_t max) {
-    if (val < min) return min;
-    if (val > max) return max;
-    return val;
-}
-*/
-
-
 uint8_t get_r(uint32_t color) {
     return (color >> 24) & 0xFF;
 }
@@ -119,7 +110,6 @@ void draw_rect(struct Image *img, const struct Rect *rect, uint32_t color) {
 //   color   - uint32_t color value
 //
 
-// we may need to use clamp here. Ill test and see. 
 void draw_circle(struct Image *img,
                  int32_t x, int32_t y, int32_t r,
                  uint32_t color) {
@@ -147,7 +137,6 @@ void draw_circle(struct Image *img,
 //
 
 
-// This is really beautiful code, well done man 
 void draw_tile(struct Image *img,
                int32_t x, int32_t y,
                struct Image *tilemap,

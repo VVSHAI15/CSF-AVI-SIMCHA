@@ -318,7 +318,7 @@ void test_compute_index() {
 
 void test_color_components() {
   // Test with a fully opaque white
-  uint32_t white = 0xFFFFFFFF; // White color
+  uint32_t white = 0xFFFFFFFF; 
   ASSERT(get_r(white) == 0xFF); // Red
   ASSERT(get_g(white) == 0xFF); // Green
   ASSERT(get_b(white) == 0xFF); // Blue
@@ -377,7 +377,7 @@ void test_blend_colors() {
   // Check if the blue component is blended correctly; the result should have more than 0 blue.
   ASSERT((result & 0x0000FF00) > 0);
 
-  // Since we're blending a semi-transparent color over an opaque one, check if the result is indeed opaque.
+  // Since we're blending a semi-transparent color over an opaque one, check if the result is actually opaque.
   ASSERT((result & 0x000000FF) == 0x000000FF);
 }
 
