@@ -1,0 +1,1 @@
+We pair coded most of the project. Avishai code some of the color and blending helper methods himself, and I did the unit testing for the helper methods. 

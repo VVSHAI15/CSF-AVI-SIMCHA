@@ -20,15 +20,6 @@ uint32_t compute_index(struct Image *img, int32_t x, int32_t y) {
     return y * img->width + x;
 }
 
-
-int32_t clamp(int32_t val, int32_t min, int32_t max) {
-    if (val < min) return min;
-    if (val > max) return max;
-    return val;
-}
-
-
-
 uint8_t get_r(uint32_t color) {
     return (color >> 24) & 0xFF;
 }
@@ -99,27 +90,6 @@ void draw_pixel(struct Image *img, int32_t x, int32_t y, uint32_t color) {
 //
 
 
-/*
-Not Sure what your doing here so I commented it out. How are x, y, and xend, yend being initialized?
-I reimplemented under. I think yours might be more optimal just not sure what your doing. 
-void draw_rect(struct Image *img,
-               const struct Rect *rect,
-               uint32_t color) {
-  int32_t x, y, x_end, y_end;  
-    //No need for clamp
-    //x = clamp(rect->x, 0, img->width - 1);
-    //y = clamp(rect->y, 0, img->height - 1);
-    //x_end = clamp(rect->x + rect->width, 0, img->width);
-    //y_end = clamp(rect->y + rect->height, 0, img->height);
-
-    for (int32_t i = y; i < y_end; ++i) {
-        for (int32_t j = x; j < x_end; ++j) {
-            draw_pixel(img, j, i, color);
-        }
-    }
-}
-*/
-
 void draw_rect(struct Image *img, const struct Rect *rect, uint32_t color) {
     for (int32_t y = rect->y; y < rect->y + rect->height; ++y) {
         for (int32_t x = rect->x; x < rect->x + rect->width; ++x) {
@@ -140,7 +110,6 @@ void draw_rect(struct Image *img, const struct Rect *rect, uint32_t color) {
 //   color   - uint32_t color value
 //
 
-// we may need to use clamp here. Ill test and see. 
 void draw_circle(struct Image *img,
                  int32_t x, int32_t y, int32_t r,
                  uint32_t color) {
@@ -168,7 +137,6 @@ void draw_circle(struct Image *img,
 //
 
 
-// This is really beautiful code, well done man 
 void draw_tile(struct Image *img,
                int32_t x, int32_t y,
                struct Image *tilemap,
@@ -176,14 +144,20 @@ void draw_tile(struct Image *img,
     if (tile->x < 0 || tile->y < 0 || tile->x + tile->width > tilemap->width || tile->y + tile->height > tilemap->height)
         return;     // Check if tile bounds are outside the tilemap
 
+
     for (int32_t i = 0; i < tile->height; ++i) {
+        int32_t destY = y + i;
+        if (destY < 0 || destY >= img->height) continue; // Skip rows outside the destination image
         for (int32_t j = 0; j < tile->width; ++j) {
+            int32_t destX = x + j;
+            if (destX < 0 || destX >= img->width) continue; // Skip columns outside the destination image
             uint32_t tile_index = (tile->y + i) * tilemap->width + (tile->x + j);
-            uint32_t dest_index = (y + i) * img->width + (x + j);
+            uint32_t dest_index = destY * img->width + destX;
             img->data[dest_index] = tilemap->data[tile_index];
         }
     }
 }
+
 
 //
 // Draw a sprite by copying all pixels in the region
@@ -208,9 +182,14 @@ void draw_sprite(struct Image *img,
         return;
 
     for (int32_t i = 0; i < sprite->height; ++i) {
+        int32_t destY = y + i;
+        if (destY < 0 || destY >= img->height) continue; // Skip rows outside the destination image
         for (int32_t j = 0; j < sprite->width; ++j) {
+            int32_t destX = x + j;
+            if (destX < 0 || destX >= img->width) continue; // Skip columns outside the destination image
             uint32_t sprite_index = (sprite->y + i) * spritemap->width + (sprite->x + j);
-            uint32_t dest_index = (y + i) * img->width + (x + j);
+            uint32_t dest_index = destY * img->width + destX;
+            // Blend only if within bounds
             img->data[dest_index] = blend_colors(spritemap->data[sprite_index], img->data[dest_index]);
         }
     }
