@@ -20,13 +20,13 @@ uint32_t compute_index(struct Image *img, int32_t x, int32_t y) {
     return y * img->width + x;
 }
 
-//No Need for clamp
-/*int32_t clamp(int32_t val, int32_t min, int32_t max) {
+
+int32_t clamp(int32_t val, int32_t min, int32_t max) {
     if (val < min) return min;
     if (val > max) return max;
     return val;
 }
-*/
+
 
 
 uint8_t get_r(uint32_t color) {

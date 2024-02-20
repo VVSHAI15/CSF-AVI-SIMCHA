@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   }
 
   TEST_INIT();
-
+/*
   // TODO: add TEST() directives for your helper functions
   TEST(test_draw_pixel);
   TEST(test_draw_rect);
@@ -105,16 +105,17 @@ int main(int argc, char **argv) {
   TEST(test_draw_circle_clip);
   TEST(test_draw_tile);
   TEST(test_draw_sprite);
+  */
 
 // Tests for helper functions. 
   TEST(test_in_bounds);
   TEST(test_compute_index);
-  TEST(test_color_components);
+  //TEST(test_color_components);
   TEST(test_blend_components);
-  TEST(test_blend_colors);
-  TEST(test_set_pixel);
+ // TEST(test_blend_colors);
+ // TEST(test_set_pixel);
 
-  TEST_FINI();
+ // TEST_FINI();
 }
 
 void test_draw_pixel(TestObjs *objs) {

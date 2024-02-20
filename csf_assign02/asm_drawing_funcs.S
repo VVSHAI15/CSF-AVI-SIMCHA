@@ -34,33 +34,103 @@
  *   %rax - 1 if coordinates are within bounds, 0 if fail
  */
 
-/*
+
  .global in_bounds
  
- in_bounds
-	pushq	%rbp 
-	mov		%rbp, %rsp
- 	mov		%rax, [%rdi + IMAGE_WIDTH_OFFSET]  //image now pointing to wdith
- 	cmp		%edx, 0		//compare y to 0
+ in_bounds:
+ 	
+	movl    IMAGE_WIDTH_OFFSET(%rdi), %r8d //image now pointing to width 
+ 	cmp		$0, %esi	//compare y to 0
  	jl		.out_of_bounds		//jump to out_of_bounds if y < 0
- 	cmp		%esi, 0
+ 	cmp		$0, %edx	//compare x to 0
  	jl		.out_of_bounds
- 	cmp		%edx, %rax		//comparing y to image width
+ 	cmp		%r8d, %esi		//comparing y to image width
  	jge		.out_of_bounds  //Jump if y >= img->width
- 	mov     %rax, [%rdi + IMAGE_HEIGHT_OFFSET] //image now pointing to heighgt
-	cmp     %esi, %rax
+ 	movl    IMAGE_HEIGHT_OFFSET(%rdi), %r8d//image now pointing to height
+	cmp     %r8d, %edx     //compre x to image height
 	jge		.out_of_bounds
-	mov     %rax, 1
- 	jmp     .done
- 
-  .out_of_bounds:
-    mov     %rax, 0
-
-.done
-	popq	%rbp
+	mov      $1, %rax
 	ret
 
-*/
+  .out_of_bounds:
+    mov     $0, %rax
+	ret
+
+
+	.globl compute_index
+compute_index:
+	movl 	IMAGE_WIDTH_OFFSET(%rdi), %r8d //pass in image width
+	imul    %edx, %r8d //y is the third parameter, multiplied by the image
+	add     %esi, %r8d //x is the second parameter, added to the image
+	mov     %r8d, %eax 
+	ret
+
+	.globl clamp
+clamp:
+	/* TODO: implement */
+	ret
+
+
+	.globl get_r
+get_r:
+	mov     %edi, %eax //pass in parameter 
+	shr     $24, %eax//shift right 24 bits
+	ret
+
+		.globl get_g
+get_g:
+	mov     %edi, %eax
+	shr     $16, %eax
+	ret
+
+
+		.globl get_b
+get_b:
+	mov     %edi, %eax
+	shr     $8, %eax
+	ret
+
+
+		.globl get_a
+get_a:
+	mov     %edi, %eax
+	ret
+
+
+		.globl blend_components
+blend_components:
+	mov     %edi, %eax //moving fg into eax
+	mul     %eax //alpha * fg, or 3rd paramater * 1st parameter
+	mov     $255, %ecx
+	sub     %edx, %ecx //255 - alpha
+	mov     %ecx, %edx //move to allow for mul
+	mul     %esi //multiply sum from above by background
+	add     %edx, %eax //add the sums
+	mov     $255, %r10d
+	mov     $0, %edx //need to move 0 into rdx for idiv
+	div     %r10d //divide
+	ret
+
+			.globl blend_colors
+blend_colors:
+	/* TODO: implement */
+	ret
+
+
+		.globl set_pixel
+set_pixel:
+	/* TODO: implement */
+	ret
+
+		.globl square
+square:
+	/* TODO: implement */
+	ret
+	
+		.globl square_dist
+square_dist:
+	/* TODO: implement */
+	ret
 
 
 /***********************************************************************
