@@ -112,6 +112,7 @@ blend_components:
     ret                     ; Return the blended component in eax
 
 		.globl blend_colors
+	; Args: %edi = fg, %esi = bg
 blend_colors:
     pushq %rbp                   
     movq %rsp, %rbp
@@ -162,7 +163,7 @@ blend_colors:
     movl %eax, %r15d             
 
     ; Now that we have all the blended components, we can eeassemble the color
-    movl $0xFF, %eax              ; Start with the alpha component
+    movl $0xFF, %eax              ; Start with the alpha component (We set Opacity to Fully Opaque)
     shll $8, %eax                 ; Shift alpha to its correct position
     orl %r15d, %eax               ; Add the blue component
     shll $8, %eax                 ; Shift blue and alpha to their correct positions
