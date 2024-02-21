@@ -348,11 +348,11 @@ void test_blend_components() {
   ASSERT(blend_components(255, 100, 255) == 255); // Opaque foreground
   
   // Test fully transparent foreground
-  //ASSERT(blend_components(0, 100, 0) == 100); // Transparent foreground
+  ASSERT(blend_components(0, 100, 0) == 100); // Transparent foreground
   
   // 50% opacity
   ASSERT(blend_components(255, 0, 128) == 128);
-  //ASSERT(blend_components(0, 255, 128) == 127);
+  ASSERT(blend_components(0, 255, 128) == 127);
 
   // Different opacity levels
   ASSERT(blend_components(255, 0, 25) == 25);

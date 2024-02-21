@@ -73,113 +73,170 @@ clamp:
 
 	.globl get_r
 get_r:
+  pushq   %rbp 
+  movq    %rsp, %rbp
 	mov     %edi, %eax /*pass in parameter */
 	shr     $24, %eax /*shift right 24 bits */
+  popq    %rbp
 	ret
 
 		.globl get_g
 get_g:
+  pushq   %rbp 
+  movq    %rsp, %rbp
 	mov     %edi, %eax
 	shr     $16, %eax
+  popq    %rbp
 	ret
 
 
 		.globl get_b
 get_b:
+  pushq   %rbp 
+  movq    %rsp, %rbp
 	mov     %edi, %eax
-	shr     $8, %eax
+  shr     $8, %eax
+  popq    %rbp
 	ret
-
 
 		.globl get_a
 get_a:
+  pushq   %rbp 
+  movq    %rsp, %rbp
 	mov     %edi, %eax
+  popq    %rbp
 	ret
 
 
 		.globl blend_components
     ; // Args: %edi = fg, %esi = bg, %edx = alpha
 blend_components:
-    mov      %edx, %r10d /* //moving alpha into r10d */ 
-    imul     %edi, %r10d /* //alpha * fg, or 3rd paramater * 1st parameter  */
-    movl     $255, %ecx  /* move 255 into ecx*/
-    sub      %edx, %ecx /* //255 - alpha */
-    imul     %esi, %ecx /* /multiply sum from above by background */
-    movl     %ecx, %eax /* store 255 - alpha * bg into eax */
-    add      %r10d, %eax /*/add the sums*/
-    movl     $255, %r10d 
-    movl     $0, %edx  /* //need to move 0 into rdx for idiv */
-    div     %r10d 
-    ret
+  pushq   %rbp 
+  movq    %rsp, %rbp
+  mov      %edx, %r10d /* //moving alpha into r10d */ 
+  imul     %edi, %r10d /* //alpha * fg, or 3rd paramater * 1st parameter  */
+  movl     $255, %ecx  /* move 255 into ecx*/
+  sub      %edx, %ecx /* //255 - alpha */
+  imul     %esi, %ecx /* /multiply sum from above by background */
+  movl     %ecx, %eax /* store 255 - alpha * bg into eax */
+  add     %r10d, %eax /*/add the sums*/
+  movl    $255, %r10d 
+  movl    $0, %edx  /* need to move 0 into rdx for idiv */
+  div     %r10d 
+  popq    %rbp
+  ret
 
 		.globl blend_colors
-	// Args: %edi = fg, %esi = bg
+	/* Args: %edi = fg, %esi = bg */
 blend_colors:
-    pushq %rbp                   
-    movq %rsp, %rbp
+/* Save the registers that we will use */
+    pushq     %rbp /* push base pointer onto the stack */
+    movq    %rsp, %rbp  /* move stack pointer to bp */
+    pushq   %r12 /* will serve as calle saved register */
+    pushq   %rbx /* will also serve as a calle saved register */
+    subq    $24, %rsp /*allocate the space on the stack */
 
-    /*Save the registers that we will use*/
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
 
-    /* Extract alpha value from the foreground color*/
-    movl %edi, %eax               /* Copy the foreground color to %eax*/
-    call get_a                    /* Get the alpha component*/
-    movl %eax, %r12d              /* Store the alpha component in %r12d */
+    movl    %edi, -36(%rbp) /*store fg (first arg) as a local variable */
+    movl    %esi, -40(%rbp) /* store bg (second arg) as a local variable */
+    
+    /*BLEND RED*/
+    movl    -36(%rbp), %eax /*move fg into eax*/
+    movl    %eax, %edi /* prep fg for get_a by moving into edi*/
+    call    get_a  /*call get a to get alpha componenet*/
+    andl    $0xFF, %eax /*isolate the lower 8 bits of eax*/
+    movl    %eax, %r12d
 
-    /* Extract and blend Red component*/
-    movl %edi, %eax               /* Move fg color to %eax to call get_r*/
-    call get_r                    /* Get the red component of the fg color*/
-    movl %eax, %r13d              /* Store result in %r13d*/
-    movl %esi, %eax               /* Move bg color to %eax to call get_r*/
-    call get_r                    /* Get the red component of the bg color*/
-    movl %r12d, %edx              /* Move the alpha value to %edx*/
-    movl %r13d, %edi              /* Move the fg red component to %edi*/
-    movl %eax, %esi               /* Move the bg red component to %esi*/
-    call blend_components         /* Blend the red components */
-    movl %eax, %r13d              /* Store the blended red component*/
+    movl    -40(%rbp), %eax  /*move bg in eax*/
+    movl    %eax, %edi  /*prep bg for get_r by moving into edi*/
+    call    get_r  /*call get_r */
+    andl    $0xFF, %eax /*isolate the lower 8 bits of eax*/
+    movl    %eax, %ebx
 
-    /* Extract and blend Green component : Repeat the same process as red*/
-    movl %edi, %eax             
-    call get_g                    
-    movl %eax, %r14d            
-    movl %esi, %eax              
-    call get_g                    
-    movl %r14d, %edi             
-    movl %eax, %esi               
-    call blend_components         
-    movl %eax, %r14d            
+    movl    -36(%rbp), %eax /*move fg into eax*/
+    movl    %eax, %edi
+    call    get_r
+    andl    $0xFF, %eax
+ 
 
-    /* Extract and blend Blue component : Same as Green and Red*/
-    movl %edi, %eax               
-    call get_b                    
-    movl %eax, %r15d             
-    movl %esi, %eax               
-    call get_b                    
-    movl %r15d, %edi             
-    movl %eax, %esi             
-    call blend_components       
-    movl %eax, %r15d             
+    movl    %r12d, %edx /*Alpha value*/
+    movl    %ebx, %esi  /*Background Red*/
+    movl    %eax, %edi  /*Foreground Red*/
+    call    blend_components
+    movl    %eax, -17(%rbp) /*Store red*/
 
-/*// Now that we have all the blended components, we can eeassemble the color*/
-    movl $0xFF, %eax              /* Start with the alpha component (We set Opacity to Fully Opaque)*/
-    shll $8, %eax                 /*Shift alpha to its correct position*/
-    orl %r15d, %eax               /* Add the blue component*/
-    shll $8, %eax                 /* Shift blue and alpha to their correct positions*/
-    orl %r14d, %eax               /* Add the green component*/
-    shll $8, %eax                 /* Shift green, blue, and alpha to their correct positions*/
-    orl %r13d, %eax               /* Add the red component*/
+    /*BLEND GREEN*/ /*(Comments are the same)*/
+    movl    -36(%rbp), %eax 
+    movl    %eax, %edi
+    call    get_a
+    andl    $0xFF, %eax
+    movl    %eax, %r12d 
 
-/*// Restore the registers*/
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
+    movl    -40(%rbp), %eax
+    movl    %eax, %edi
+    call    get_g
+    andl    $0xFF, %eax
+    movl    %eax, %ebx 
 
-    popq %rbp                    
-    ret                           /* Return with the blended color in %eax*/
+
+    movl    -36(%rbp), %eax
+    movl    %eax, %edi
+    call    get_g
+    andl    $0xFF, %eax
+
+    movl    %r12d, %edx
+    movl    %ebx, %esi
+    movl    %eax, %edi
+    call    blend_components
+    movl    %eax, -23(%rbp)
+
+     /*BLEND BLUE*/  /*(Comments are the same)*/
+    movl    -36(%rbp), %eax
+    movl    %eax, %edi
+    call    get_a
+    andl    $0xFF, %eax
+    movl    %eax, %r12d 
+
+    movl    -40(%rbp), %eax
+    movl    %eax, %edi
+    call    get_b
+    andl    $0xFF, %eax
+    movl    %eax, %ebx 
+
+    movl    -36(%rbp), %eax
+    movl    %eax, %edi
+    call    get_b
+    andl    $0xFF, %eax
+    
+    movl    %r12d, %edx
+    movl    %ebx, %esi
+    movl    %eax, %edi
+    call    blend_components
+    movl    %eax, -27(%rbp)
+
+    /* Assemble final color */
+    movl  -17(%rbp), %eax /*move red into eax*/
+    shll    $24, %eax  /*shift red to the correct bit position */
+    movl    %eax, %edx  /*move shifted red into new color storage */
+
+    movl  -23(%rbp), %eax /*move green into eax*/
+    shll    $16, %eax /*shift green to the correct bit position */
+    orl     %eax, %edx /*move shifted green into new color storage but due to combination, use or*/
+
+    movl  -27(%rbp), %eax /*move blue into eax*/
+    shll    $8, %eax /*shift blue to the correct bit position */
+    orl     %edx, %eax /*combine blue and the rest via bitwise or*/
+    orl     $0xFF, %eax /*ensure alpha is fully opaque */
+    
+    /*free everything else*/
+    addq    $24, %rsp 
+    popq    %rbx
+    popq    %r12
+    popq    %rbp
+    ret
+
+
+
 
 		.globl set_pixel
 	// Args: %rdi = img, %rsi = index, %rdx = color
@@ -198,7 +255,7 @@ square:
 		.globl square_dist
 	// Args: %rdi = x1, %rsi = y1, %rdx = x2, %rcx = y2
 square_dist:
-	movq %rdi, %rax    // First we move x1 into rax
+	  movq %rdi, %rax    // First we move x1 into rax
     subq %rdx, %rax    // Next we Subtract x2, rax now holds (x1 - x2)
     imulq %rax, %rax   // Square (x1 - x2), result is stored in rax
 
