@@ -39,15 +39,15 @@
  
  in_bounds:
  	
-	movl    IMAGE_WIDTH_OFFSET(%rdi), %r8d //image now pointing to width 
- 	cmp		$0, %esi	//compare y to 0
- 	jl		.out_of_bounds		//jump to out_of_bounds if y < 0
- 	cmp		$0, %edx	//compare x to 0
+	movl    IMAGE_WIDTH_OFFSET(%rdi), %r8d /*image now pointing to width  */
+ 	cmp		$0, %esi	/*compare y to 0 */
+ 	jl		.out_of_bounds		/*jump to out_of_bounds if y < 0 */
+ 	cmp		$0, %edx	/*compare x to 0 */
  	jl		.out_of_bounds
- 	cmp		%r8d, %esi		//comparing y to image width
- 	jge		.out_of_bounds  //Jump if y >= img->width
- 	movl    IMAGE_HEIGHT_OFFSET(%rdi), %r8d//image now pointing to height
-	cmp     %r8d, %edx     //compre x to image height
+ 	cmp		%r8d, %esi		/*comparing y to image width */
+ 	jge		.out_of_bounds  /*Jump if y >= img->width */
+ 	movl    IMAGE_HEIGHT_OFFSET(%rdi), %r8d/*image now pointing to height */
+	cmp     %r8d, %edx     /*compre x to image height */
 	jge		.out_of_bounds
 	mov      $1, %rax
 	ret
@@ -59,9 +59,9 @@
 
 	.globl compute_index
 compute_index:
-	movl 	IMAGE_WIDTH_OFFSET(%rdi), %r8d //pass in image width
-	imul    %edx, %r8d //y is the third parameter, multiplied by the image
-	add     %esi, %r8d //x is the second parameter, added to the image
+	movl 	IMAGE_WIDTH_OFFSET(%rdi), %r8d /*pass in image width */
+	imul    %edx, %r8d /*y is the third parameter, multiplied by the image */
+	add     %esi, %r8d /*/x is the second parameter, added to the image */
 	mov     %r8d, %eax 
 	ret
 
@@ -73,8 +73,8 @@ clamp:
 
 	.globl get_r
 get_r:
-	mov     %edi, %eax //pass in parameter 
-	shr     $24, %eax//shift right 24 bits
+	mov     %edi, %eax /*pass in parameter */
+	shr     $24, %eax /*shift right 24 bits */
 	ret
 
 		.globl get_g
@@ -98,18 +98,19 @@ get_a:
 
 
 		.globl blend_components
-    // Args: %edi = fg, %esi = bg, %edx = alpha
+    ; // Args: %edi = fg, %esi = bg, %edx = alpha
 blend_components:
-    movl %edx, %eax         // First We move alpha into eax for multiplication with fg
-    imull %edi, %eax        // Now we multiply alpha * fg, the result fits in eax 
-    movl %edx, %ebx         // We copy alpha to ebx so we can subtract
-    subl $255, %ebx         // ebx now holds 255 - alpha
-    imull %esi, %ebx        // We multiply (255 - alpha) * bg
-    addl %ebx, %eax         // Now we can add the two products
-    movl $255, %ebx         // We need to load 255 into ebx for division
-    cltd                    // Also we need to sign extend eax into edx:eax for division
-    idivl %ebx              // Finally we divide by 255 to normalize the blended component
-    ret                     // Return the blended component in eax
+    mov      %edx, %r10d /* //moving alpha into r10d */ 
+    imul     %edi, %r10d /* //alpha * fg, or 3rd paramater * 1st parameter  */
+    movl     $255, %ecx  /* move 255 into ecx*/
+    sub      %edx, %ecx /* //255 - alpha */
+    imul     %esi, %ecx /* /multiply sum from above by background */
+    movl     %ecx, %eax /* store 255 - alpha * bg into eax */
+    add      %r10d, %eax /*/add the sums*/
+    movl     $255, %r10d 
+    movl     $0, %edx  /* //need to move 0 into rdx for idiv */
+    div     %r10d 
+    ret
 
 		.globl blend_colors
 	// Args: %edi = fg, %esi = bg
@@ -117,30 +118,30 @@ blend_colors:
     pushq %rbp                   
     movq %rsp, %rbp
 
-    // Save the registers that we will use
+    /*Save the registers that we will use*/
     pushq %r12
     pushq %r13
     pushq %r14
     pushq %r15
 
-    // Extract alpha value from the foreground color
-    movl %edi, %eax               // Copy the foreground color to %eax
-    call get_a                    // Get the alpha component
-    movl %eax, %r12d              // Store the alpha component in %r12d 
+    /* Extract alpha value from the foreground color*/
+    movl %edi, %eax               /* Copy the foreground color to %eax*/
+    call get_a                    /* Get the alpha component*/
+    movl %eax, %r12d              /* Store the alpha component in %r12d */
 
-    // Extract and blend Red component
-    movl %edi, %eax               // Move fg color to %eax to call get_r
-    call get_r                    // Get the red component of the fg color
-    movl %eax, %r13d              // Store result in %r13d
-    movl %esi, %eax               // Move bg color to %eax to call get_r
-    call get_r                    // Get the red component of the bg color
-    movl %r12d, %edx              // Move the alpha value to %edx
-    movl %r13d, %edi              // Move the fg red component to %edi
-    movl %eax, %esi               // Move the bg red component to %esi
-    call blend_components         // Blend the red components 
-    movl %eax, %r13d              // Store the blended red component
+    /* Extract and blend Red component*/
+    movl %edi, %eax               /* Move fg color to %eax to call get_r*/
+    call get_r                    /* Get the red component of the fg color*/
+    movl %eax, %r13d              /* Store result in %r13d*/
+    movl %esi, %eax               /* Move bg color to %eax to call get_r*/
+    call get_r                    /* Get the red component of the bg color*/
+    movl %r12d, %edx              /* Move the alpha value to %edx*/
+    movl %r13d, %edi              /* Move the fg red component to %edi*/
+    movl %eax, %esi               /* Move the bg red component to %esi*/
+    call blend_components         /* Blend the red components */
+    movl %eax, %r13d              /* Store the blended red component*/
 
-    // Extract and blend Green component : Repeat the same process as red
+    /* Extract and blend Green component : Repeat the same process as red*/
     movl %edi, %eax             
     call get_g                    
     movl %eax, %r14d            
@@ -151,7 +152,7 @@ blend_colors:
     call blend_components         
     movl %eax, %r14d            
 
-    // Extract and blend Blue component : Same as Green and Red
+    /* Extract and blend Blue component : Same as Green and Red*/
     movl %edi, %eax               
     call get_b                    
     movl %eax, %r15d             
@@ -162,23 +163,23 @@ blend_colors:
     call blend_components       
     movl %eax, %r15d             
 
-    // Now that we have all the blended components, we can eeassemble the color
-    movl $0xFF, %eax              // Start with the alpha component (We set Opacity to Fully Opaque)
-    shll $8, %eax                 // Shift alpha to its correct position
-    orl %r15d, %eax               // Add the blue component
-    shll $8, %eax                 // Shift blue and alpha to their correct positions
-    orl %r14d, %eax               // Add the green component
-    shll $8, %eax                 // Shift green, blue, and alpha to their correct positions
-    orl %r13d, %eax               // Add the red component
+/*// Now that we have all the blended components, we can eeassemble the color*/
+    movl $0xFF, %eax              /* Start with the alpha component (We set Opacity to Fully Opaque)*/
+    shll $8, %eax                 /*Shift alpha to its correct position*/
+    orl %r15d, %eax               /* Add the blue component*/
+    shll $8, %eax                 /* Shift blue and alpha to their correct positions*/
+    orl %r14d, %eax               /* Add the green component*/
+    shll $8, %eax                 /* Shift green, blue, and alpha to their correct positions*/
+    orl %r13d, %eax               /* Add the red component*/
 
-    // Restore the registers
+/*// Restore the registers*/
     popq %r15
     popq %r14
     popq %r13
     popq %r12
 
     popq %rbp                    
-    ret                           // Return with the blended color in %eax
+    ret                           /* Return with the blended color in %eax*/
 
 		.globl set_pixel
 	// Args: %rdi = img, %rsi = index, %rdx = color
