@@ -224,9 +224,26 @@ square_dist:
  */
 	.globl draw_pixel
 draw_pixel:
-	/* TODO: implement */
-	ret
+	draw_pixel:
+    pushq %rbp                   // Save base pointer
+    movq %rsp, %rbp              // Establish stack frame
 
+
+    call in_bounds               // First we call in_bounds to check if the pixel is within the image bounds
+    testl %eax, %eax             // Test the return value of in_bounds
+    jz .Lpixel_out_of_bounds     // If in_bounds returns 0, jump to .Lpixel_out_of_bounds
+
+    // If the pixel is within bounds, we need to compute the idx where the pixel color should be stored in the image's data array
+    call compute_index           // We call compute_index to calculate the data array index
+    movl %eax, %esi              // Move the index into %esi so we can call set_pixel
+
+    // Set the pixel color by callin set_pixel
+    movl %ecx, %edx              // Move color into %edx for set_pixel
+    call set_pixel               // Now, call set_pixel to draw the pixel
+
+.Lpixel_out_of_bounds:          // If pixels are out of bounds
+    popq %rbp                    // Restore base pointer
+    ret                          // Return from function
 
 /*
  * Draw a rectangle.
