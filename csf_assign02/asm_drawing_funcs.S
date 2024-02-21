@@ -109,7 +109,7 @@ get_a:
 
 
 		.globl blend_components
-    ; // Args: %edi = fg, %esi = bg, %edx = alpha
+    // Args: %edi = fg, %esi = bg, %edx = alpha
 blend_components:
   pushq   %rbp 
   movq    %rsp, %rbp
@@ -239,12 +239,21 @@ blend_colors:
 
 
 		.globl set_pixel
-	// Args: %rdi = img, %rsi = index, %rdx = color
+// Args: %rdi = img, %rsi = index, %rdx = color
 set_pixel:
-    movq (%rdi), %rax        // We load the address of the data array into rax
-    movl %edx, (%rax,%rsi,4) // We store the new color at data[index] There is a scale factor of 4 for 32-bit data.
-    ret                      // Return
+    pushq %rbp                   
+    movq %rsp, %rbp
 
+    movq (%rdi), %rax            // Load the address of the data array into %rax
+    movl (%rax,%rsi,4), %ecx     // Load the previos color at data[index] into %ecx
+    pushq %rdx                   // Save the new color value on the stack for later
+    movl %ecx, %esi              // Move the ethe previous color into %esi for blend_colors
+    popq %rdx                    // Restore new color value into %rdx to call blend_colors
+    call blend_colors            // Blend the two colors 
+    movl %eax, (%rax,%rsi,4)     // Finally, store the blended color back at data[index]
+
+    popq %rbp                   
+    ret
 		.globl square
 	// Args: %rdi = x
 square:
@@ -281,27 +290,47 @@ square_dist:
  *   %ecx     - uint32_t color value
  */
 	.globl draw_pixel
+// Args: %rdi = pointer to struct Image, %esi = x, %edx = y, %ecx = color
 draw_pixel:
-	draw_pixel:
     pushq %rbp                   // Save base pointer
     movq %rsp, %rbp              // Establish stack frame
 
+    // Save registers that we will modify and need to be preserved
+    pushq %rdi
+    pushq %rsi
+    pushq %rdx
+    pushq %rcx
 
-    call in_bounds               // First we call in_bounds to check if the pixel is within the image bounds
-    testl %eax, %eax             // Test the return value of in_bounds
-    jz .Lpixel_out_of_bounds     // If in_bounds returns 0, jump to .Lpixel_out_of_bounds
+    // First we call in_bounds to check if the pixel is within the image bounds
+    movq %rdi, %rdi              // Image struct pointer
+    movl %esi, %esi              // x coordinate
+    movl %edx, %edx              // y coordinate
+    call in_bounds               // Check the bounds
+    testl %eax, %eax             // Test the return value
+    jz .Lpixel_out_of_bounds     // Jump if out of bounds
 
-    // If the pixel is within bounds, we need to compute the idx where the pixel color should be stored in the image's data array
-    call compute_index           // We call compute_index to calculate the data array index
-    movl %eax, %esi              // Move the index into %esi so we can call set_pixel
+    // Next, we compute the index for the pixel
+    movq %rdi, %rdi              
+    movl %esi, %esi              
+    movl %edx, %edx              
+    call compute_index           // Compute index
+    movl %eax, %esi              // Move computed index to %esi to call set_pixel
 
-    // Set the pixel color by callin set_pixel
-    movl %ecx, %edx              // Move color into %edx for set_pixel
-    call set_pixel               // Now, call set_pixel to draw the pixel
+    // Prepare to call set_pixel
+    popq %rcx                    // Restore the original color value into %rcx
+    movq %rdi, %rdi              // Make sureimg pointer is in %rdi
+    movl %ecx, %edx              // Move the color into %edx
+    call set_pixel               // Set the pixel
 
-.Lpixel_out_of_bounds:          // If pixels are out of bounds
+.Lpixel_out_of_bounds:
+    // Restore registers
+    popq %rcx
+    popq %rdx
+    popq %rsi
+    popq %rdi
+
     popq %rbp                    // Restore base pointer
-    ret                          // Return from function
+    ret                          
 
 /*
  * Draw a rectangle.
