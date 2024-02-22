@@ -1,1 +1,1 @@
-We pair coded most of the project. Avishai code some of the color and blending helper methods himself, and I did the unit testing for the helper methods. 
+We pair coded most of the project. Avishai coded all of the color and blending components helper methods himself, and I did draw pixel and set pixel by myself.

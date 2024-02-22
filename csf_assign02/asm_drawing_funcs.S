@@ -21,7 +21,6 @@
    they can be called from the unit test code.
  ***********************************************************************/
 
-/* TODO: implement your helper functions here */
 /* Function in_bounds
  * Ensure that variables x and y fall within the given bounds of the image
  *
@@ -33,7 +32,6 @@
  * Returns:
  *   %rax - 1 if coordinates are within bounds, 0 if fail
  */
-
 
  .global in_bounds
  
@@ -57,6 +55,17 @@
 	ret
 
 
+/* Function compute_index
+ * Compute the index of the Data array to edit
+ *
+ * Parameters:
+ *   %rdi     - pointer to struct Image
+ *   %esi     - x coordinate (pixel column)
+ *   %edx     - y coordinate (pixel row)
+ *
+ * Returns:
+ *   %rax - The Index
+ */
 	.globl compute_index
 compute_index:
 	movl 	IMAGE_WIDTH_OFFSET(%rdi), %r8d /*pass in image width */
@@ -65,12 +74,16 @@ compute_index:
 	mov     %r8d, %eax 
 	ret
 
-	.globl clamp
-clamp:
-	/* TODO: implement */
-	ret
 
-
+/* Function get_r
+ * Gets the red component of a color
+ *
+ * Parameters:
+ *   %rdi     - Color pointer 
+ *
+ * Returns:
+ *   %rax - The red component 
+ */
 	.globl get_r
 get_r:
   pushq   %rbp 
@@ -80,6 +93,15 @@ get_r:
   popq    %rbp
 	ret
 
+/* Function get_g
+ * Gets the green component of a color
+ *
+ * Parameters:
+ *   %rdi     - Color pointer 
+ *
+ * Returns:
+ *   %rax - The Green component 
+ */
 		.globl get_g
 get_g:
   pushq   %rbp 
@@ -89,7 +111,15 @@ get_g:
   popq    %rbp
 	ret
 
-
+/* Function get_b
+ * Gets the blue component of a color
+ *
+ * Parameters:
+ *   %rdi     - Color pointer 
+ *
+ * Returns:
+ *   %rax - The blue component 
+ */
 		.globl get_b
 get_b:
   pushq   %rbp 
@@ -99,6 +129,15 @@ get_b:
   popq    %rbp
 	ret
 
+/* Function get_a
+ * Gets the alpha component of a color
+ *
+ * Parameters:
+ *   %rdi     - Color pointer 
+ *
+ * Returns:
+ *   %rax - The alpha component 
+ */
 		.globl get_a
 get_a:
   pushq   %rbp 
@@ -107,9 +146,18 @@ get_a:
   popq    %rbp
 	ret
 
-
+/* Function blend_components 
+ * Blends foreground and background color components together
+ *
+ * Parameters:
+ *   %edi     - Fg component
+ *   %esi     - Bg component 
+ *   %edx     - alpha
+ *
+ * Returns:
+ *   %rax - The blended component
+ */
 		.globl blend_components
-    // Args: %edi = fg, %esi = bg, %edx = alpha
 blend_components:
   pushq   %rbp 
   movq    %rsp, %rbp
@@ -126,8 +174,17 @@ blend_components:
   popq    %rbp
   ret
 
+/* Function blend_colors
+ * Blends the foreground and background colors together
+ *
+ * Parameters:
+ *   %edi     - Fg color
+ *   %esi     - Bg color
+ *
+ * Returns:
+ *   %rax - The blended color 
+ */
 		.globl blend_colors
-	/* Args: %edi = fg, %esi = bg */
 blend_colors:
 /* Save the registers that we will use */
     pushq     %rbp /* push base pointer onto the stack */
@@ -235,34 +292,67 @@ blend_colors:
     popq    %rbp
     ret
 
-
-
-
+/* Function set_pixel
+ * Sets a specific pixel in the Data array to a given color, blending it with the previous color 
+ *
+ * Parameters:
+ *   %rdi     - img pointer 
+ *   %rsi     - in
+ *   %rdx     - color
+ *
+ * Returns:
+ *  Nothing
+ */
 		.globl set_pixel
-// Args: %rdi = img, %rsi = index, %rdx = color
 set_pixel:
     pushq %rbp                   
     movq %rsp, %rbp
+    subq $8, %rsp
+    pushq %r12
+    pushq %rdx                  // Save the new color value on the stack for later
+    
+    mov 8(%rdi), %rax           // Load the address of the data array into %rax
+    lea (%rax,%rsi,4), %rax     // find the adress of the old color 
+    mov (%rax), %esi
+    mov %rax, %r12             // store the old color in r12 
+    mov %edx, %edi
+    call blend_colors          // Blend the colors 
+    movl %eax, (%r12)          // Finally, put the blended color back at data[index]
 
-    movq (%rdi), %rax            // Load the address of the data array into %rax
-    movl (%rax,%rsi,4), %ecx     // Load the previos color at data[index] into %ecx
-    pushq %rdx                   // Save the new color value on the stack for later
-    movl %ecx, %esi              // Move the ethe previous color into %esi for blend_colors
-    popq %rdx                    // Restore new color value into %rdx to call blend_colors
-    call blend_colors            // Blend the two colors 
-    movl %eax, (%rax,%rsi,4)     // Finally, store the blended color back at data[index]
-
+    popq %rdx
+    popq %r12
+    add $8, %rsp
     popq %rbp                   
     ret
-		.globl square
-	// Args: %rdi = x
+
+/* Function square
+ * Squares a given value
+ *
+ * Parameters:
+ *   %rdi     - x
+ *
+ * Returns:
+ *   %rax - The squared value 
+ */
+	.globl square
 square:
 	movq %rdi, %rax    // Move x into rax
     imulq %rax, %rax   // Multiply rax by itself
 	ret				   // Return the result in rax
 	
+/* Function square_dist 
+ * calculates the square distance between two points 
+ *
+ * Parameters:
+ *   %rdi     - x1
+ *   %rsi     - y1 
+ *   %rdx     - x2
+ *   %rcx     - y2
+ *
+ * Returns:
+ *   %rax - The squared distance 
+ */
 		.globl square_dist
-	// Args: %rdi = x1, %rsi = y1, %rdx = x2, %rcx = y2
 square_dist:
 	  movq %rdi, %rax    // First we move x1 into rax
     subq %rdx, %rax    // Next we Subtract x2, rax now holds (x1 - x2)
@@ -290,46 +380,45 @@ square_dist:
  *   %ecx     - uint32_t color value
  */
 	.globl draw_pixel
-// Args: %rdi = pointer to struct Image, %esi = x, %edx = y, %ecx = color
 draw_pixel:
     pushq %rbp                   // Save base pointer
     movq %rsp, %rbp              // Establish stack frame
 
     // Save registers that we will modify and need to be preserved
+    subq $8, %rsp
     pushq %rdi
-    pushq %rsi
-    pushq %rdx
-    pushq %rcx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+
+    mov %rsi, %r12
+    mov %rdx, %r13
+    mov %rcx, %r14
 
     // First we call in_bounds to check if the pixel is within the image bounds
-    movq %rdi, %rdi              // Image struct pointer
-    movl %esi, %esi              // x coordinate
-    movl %edx, %edx              // y coordinate
     call in_bounds               // Check the bounds
-    testl %eax, %eax             // Test the return value
+    cmpl  $0, %eax            // Test the return value
     jz .Lpixel_out_of_bounds     // Jump if out of bounds
 
     // Next, we compute the index for the pixel
-    movq %rdi, %rdi              
-    movl %esi, %esi              
-    movl %edx, %edx              
+    movl %r12d, %esi              
+    movl %r13d, %edx           
     call compute_index           // Compute index
     movl %eax, %esi              // Move computed index to %esi to call set_pixel
 
     // Prepare to call set_pixel
-    popq %rcx                    // Restore the original color value into %rcx
-    movq %rdi, %rdi              // Make sureimg pointer is in %rdi
-    movl %ecx, %edx              // Move the color into %edx
+    movl %r14d, %edx           
     call set_pixel               // Set the pixel
 
 .Lpixel_out_of_bounds:
     // Restore registers
-    popq %rcx
-    popq %rdx
-    popq %rsi
+    popq %r14
+    popq %r13
+    popq %r12
     popq %rdi
+    addq $8, %rsp
 
-    popq %rbp                    // Restore base pointer
+    popq %rbp                    
     ret                          
 
 /*
