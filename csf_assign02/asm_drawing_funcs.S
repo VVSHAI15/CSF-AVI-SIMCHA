@@ -433,66 +433,51 @@ draw_pixel:
  */
 	.globl draw_rect
 draw_rect:
-  pushq %rbp                             // Save old base pointer
-  movq %rsp, %rbp                        // Set new base pointer
-  subq $64, %rsp                         // Allocate space for all local variables
-
-  movq %rdi, -8(%rbp)                    // Store img pointer
-  movl %edx, -12(%rbp)                   // Store color
-
-  // Load and store initial rectangle properties
-  movl RECT_X_OFFSET(%rsi), %eax         // Load rect.x
-  movl %eax, -16(%rbp)                   // Store initial x
-  movl %eax, -24(%rbp)                   // Store current x (start with initial x)
-  
-  movl RECT_Y_OFFSET(%rsi), %eax         // Load rect.y
-  movl %eax, -20(%rbp)                   // Store initial y
-  movl %eax, -28(%rbp)                   // Store current y (start with initial y)
-
-  // Calculate and store endx and endy
-  movl RECT_WIDTH_OFFSET(%rsi), %eax     // Load rect.width
-  addl -16(%rbp), %eax                   // Add initial x to width
-  movl %eax, -32(%rbp)                   // Store end x
-  
-  movl RECT_HEIGHT_OFFSET(%rsi), %eax    // Load rect.height
-  addl -20(%rbp), %eax                   // Add initial y to height
-  movl %eax, -36(%rbp)                   // Store end y
-
-.Lloop_y:
-  movl -28(%rbp), %eax                   // Load current y
-  cmp %eax, -36(%rbp)                    // Compare current y with end y
-  jge .Ldone                             // If current y >= end y, we're done
-
-  movl -16(%rbp), %eax
-  movl %eax, -24(%rbp)                   // reset x back to its intial value
-
-.Lloop_x:
-  movl -24(%rbp), %eax                   // Load current x
-  cmp %eax, -32(%rbp)                    // Compare current x with end x
-  jge .Lnext_row                          // If current x >= end x, prepare for next row
-
-  // Draw pixel
-  movq -8(%rbp), %rdi                    // Pass img pointer
-  movl %eax, %esi                        // Pass current x
-  movl -28(%rbp), %edx                   // Pass current y
-  movl -12(%rbp), %ecx                   // Pass color
-  call draw_pixel
-
-  movl -24(%rbp), %eax                   // Load current x
-  incl %eax                              // Increment current x
-  movl %eax, -24(%rbp)                   // Update current x on the stack
-  jmp .Lloop_x                           // Continue loop for width
-
-.Lnext_row:
-  movl -28(%rbp), %eax                   // Load current y
-  incl %eax                              // Increment current y
-  movl %eax, -28(%rbp)                   // Update current y on the stack
-  jmp .Lloop_y                            // Continue loop for height
-
-.Ldone:
-  addq $64, %rsp                         // Deallocate space for all local variables
-  popq %rbp                              // Restore old base pointer
-  ret            
+        pushq   %rbp
+        movq    %rsp, %rbp
+        subq    $48, %rsp
+        movq    %rdi, -24(%rbp)
+        movq    %rsi, -32(%rbp)
+        movl    %edx, -36(%rbp)
+        movq    -32(%rbp), %rax
+        movl    4(%rax), %eax
+        movl    %eax, -4(%rbp)
+        jmp     .L2
+.L5:
+        movq    -32(%rbp), %rax
+        movl    (%rax), %eax
+        movl    %eax, -8(%rbp)
+        jmp     .L3
+.L4:
+        movl    -36(%rbp), %ecx
+        movl    -4(%rbp), %edx
+        movl    -8(%rbp), %esi
+        movq    -24(%rbp), %rax
+        movq    %rax, %rdi
+        movl    $0, %eax
+        call    draw_pixel
+        addl    $1, -8(%rbp)
+.L3:
+        movq    -32(%rbp), %rax
+        movl    (%rax), %edx
+        movq    -32(%rbp), %rax
+        movl    8(%rax), %eax
+        addl    %edx, %eax
+        cmpl    %eax, -8(%rbp)
+        jl      .L4
+        addl    $1, -4(%rbp)
+.L2:
+        movq    -32(%rbp), %rax
+        movl    4(%rax), %edx
+        movq    -32(%rbp), %rax
+        movl    12(%rax), %eax
+        addl    %edx, %eax
+        cmpl    %eax, -4(%rbp)
+        jl      .L5
+        nop
+        nop
+        leave
+        ret      
 /*
  * Draw a circle.
  * The circle has x,y as its center and has r as its radius.
@@ -592,9 +577,129 @@ draw_circle:
  */
 	.globl draw_tile
 draw_tile:
-	/* TODO: implement */
-	ret
-
+	draw_tile:
+        pushq   %rbp
+        movq    %rsp, %rbp
+        movq    %rdi, -40(%rbp)
+        movl    %esi, -44(%rbp)
+        movl    %edx, -48(%rbp)
+        movq    %rcx, -56(%rbp)
+        movq    %r8, -64(%rbp)
+        movq    -64(%rbp), %rax
+        movl    (%rax), %eax
+        testl   %eax, %eax
+        js      .L150
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %eax
+        testl   %eax, %eax
+        js      .L150
+        movq    -64(%rbp), %rax
+        movl    (%rax), %edx
+        movq    -64(%rbp), %rax
+        movl    8(%rax), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    (%rax), %eax
+        cmpl    %edx, %eax
+        jb      .L150
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %edx
+        movq    -64(%rbp), %rax
+        movl    12(%rax), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    4(%rax), %eax
+        cmpl    %edx, %eax
+        jb      .L150
+        movl    $0, -4(%rbp)
+        jmp     .L57
+.L140:
+        movl    -48(%rbp), %edx
+        movl    -4(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -12(%rbp)
+        cmpl    $0, -12(%rbp)
+        js      .L160
+        movq    -40(%rbp), %rax
+        movl    4(%rax), %eax
+        movl    -12(%rbp), %edx
+        cmpl    %eax, %edx
+        jnb     .L160
+        movl    $0, -8(%rbp)
+        jmp     .L90
+.L130:
+        movl    -44(%rbp), %edx
+        movl    -8(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -16(%rbp)
+        cmpl    $0, -16(%rbp)
+        js      .L170
+        movq    -40(%rbp), %rax
+        movl    (%rax), %eax
+        movl    -16(%rbp), %edx
+        cmpl    %eax, %edx
+        jnb     .L170
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %edx
+        movl    -4(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    (%rax), %eax
+        imull   %eax, %edx
+        movq    -64(%rbp), %rax
+        movl    (%rax), %ecx
+        movl    -8(%rbp), %eax
+        addl    %ecx, %eax
+        addl    %edx, %eax
+        movl    %eax, -20(%rbp)
+        movq    -40(%rbp), %rax
+        movl    (%rax), %edx
+        movl    -12(%rbp), %eax
+        imull   %eax, %edx
+        movl    -16(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -24(%rbp)
+        movq    -56(%rbp), %rax
+        movq    8(%rax), %rax
+        movl    -20(%rbp), %edx
+        salq    $2, %rdx
+        leaq    (%rax,%rdx), %rcx
+        movq    -40(%rbp), %rax
+        movq    8(%rax), %rax
+        movl    -24(%rbp), %edx
+        salq    $2, %rdx
+        addq    %rax, %rdx
+        movl    (%rcx), %eax
+        movl    %eax, (%rdx)
+        jmp     .L120
+.L170:
+        nop
+.L120:
+        addl    $1, -8(%rbp)
+.L90:
+        movq    -64(%rbp), %rax
+        movl    8(%rax), %eax
+        cmpl    %eax, -8(%rbp)
+        jl      .L130
+        jmp     .L80
+.L160:
+        nop
+.L80:
+        addl    $1, -4(%rbp)
+.L57:
+        movq    -64(%rbp), %rax
+        movl    12(%rax), %eax
+        cmpl    %eax, -4(%rbp)
+        jl      .L140
+        jmp     .L10
+.L150:
+        nop
+.L10:
+        popq    %rbp
+        ret
 /*
  * Draw a sprite by copying all pixels in the region
  * enclosed by the sprite parameter in the spritemap image
@@ -612,8 +717,142 @@ draw_tile:
  */
 	.globl draw_sprite
 draw_sprite:
-	/* TODO: implement */
-	ret
+	draw_sprite:
+        pushq   %rbp
+        movq    %rsp, %rbp
+        subq    $64, %rsp
+        movq    %rdi, -40(%rbp)
+        movl    %esi, -44(%rbp)
+        movl    %edx, -48(%rbp)
+        movq    %rcx, -56(%rbp)
+        movq    %r8, -64(%rbp)
+        movq    -64(%rbp), %rax
+        movl    (%rax), %eax
+        testl   %eax, %eax
+        js      .L15
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %eax
+        testl   %eax, %eax
+        js      .L15
+        movq    -64(%rbp), %rax
+        movl    (%rax), %edx
+        movq    -64(%rbp), %rax
+        movl    8(%rax), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    (%rax), %eax
+        cmpl    %edx, %eax
+        jb      .L15
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %edx
+        movq    -64(%rbp), %rax
+        movl    12(%rax), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    4(%rax), %eax
+        cmpl    %edx, %eax
+        jb      .L15
+        movl    $0, -4(%rbp)
+        jmp     .L50
+.L14:
+        movl    -48(%rbp), %edx
+        movl    -4(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -12(%rbp)
+        cmpl    $0, -12(%rbp)
+        js      .L16
+        movq    -40(%rbp), %rax
+        movl    4(%rax), %eax
+        movl    -12(%rbp), %edx
+        cmpl    %eax, %edx
+        jnb     .L16
+        movl    $0, -8(%rbp)
+        jmp     .L9
+.L13:
+        movl    -44(%rbp), %edx
+        movl    -8(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -16(%rbp)
+        cmpl    $0, -16(%rbp)
+        js      .L17
+        movq    -40(%rbp), %rax
+        movl    (%rax), %eax
+        movl    -16(%rbp), %edx
+        cmpl    %eax, %edx
+        jnb     .L17
+        movq    -64(%rbp), %rax
+        movl    4(%rax), %edx
+        movl    -4(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, %edx
+        movq    -56(%rbp), %rax
+        movl    (%rax), %eax
+        imull   %eax, %edx
+        movq    -64(%rbp), %rax
+        movl    (%rax), %ecx
+        movl    -8(%rbp), %eax
+        addl    %ecx, %eax
+        addl    %edx, %eax
+        movl    %eax, -20(%rbp)
+        movq    -40(%rbp), %rax
+        movl    (%rax), %edx
+        movl    -12(%rbp), %eax
+        imull   %eax, %edx
+        movl    -16(%rbp), %eax
+        addl    %edx, %eax
+        movl    %eax, -24(%rbp)
+        movq    -40(%rbp), %rax
+        movq    8(%rax), %rax
+        movl    -24(%rbp), %edx
+        salq    $2, %rdx
+        addq    %rdx, %rax
+        movl    (%rax), %edx
+        movq    -56(%rbp), %rax
+        movq    8(%rax), %rax
+        movl    -20(%rbp), %ecx
+        salq    $2, %rcx
+        addq    %rcx, %rax
+        movl    (%rax), %eax
+        movl    %edx, %esi
+        movl    %eax, %edi
+        movl    $0, %eax
+        call    blend_colors
+        movl    %eax, %ecx
+        movq    -40(%rbp), %rax
+        movq    8(%rax), %rax
+        movl    -24(%rbp), %edx
+        salq    $2, %rdx
+        addq    %rdx, %rax
+        movl    %ecx, %edx
+        movl    %edx, (%rax)
+        jmp     .L12
+.L17:
+        nop
+.L12:
+        addl    $1, -8(%rbp)
+.L9:
+        movq    -64(%rbp), %rax
+        movl    8(%rax), %eax
+        cmpl    %eax, -8(%rbp)
+        jl      .L13
+        jmp     .L8
+.L16:
+        nop
+.L8:
+        addl    $1, -4(%rbp)
+.L50:
+        movq    -64(%rbp), %rax
+        movl    12(%rax), %eax
+        cmpl    %eax, -4(%rbp)
+        jl      .L14
+        jmp     .L1
+.L15:
+        nop
+.L1:
+        leave
+        ret
 
 /*
 vim:ft=gas:
