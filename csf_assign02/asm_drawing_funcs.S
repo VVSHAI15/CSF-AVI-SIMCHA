@@ -508,75 +508,72 @@ draw_rect:
 draw_circle:
   pushq %rbp                             // Save old base pointer
   movq %rsp, %rbp                        // Set new base pointer
-  subq $48, %rsp                         // Allocate space for local variables
+  pushq %rbx
+  subq $56, %rsp                         // Allocate space for local variables
 
-  movq %rdi, -8(%rbp)                    // Store img pointer
-  movl %esi, -12(%rbp)                   // Store center x
-  movl %edx, -16(%rbp)                   // Store center y
-  movl %ecx, -20(%rbp)                   // Store radius
-  movl %r8d, -24(%rbp)                   // Store color
+  movq %rdi, -40(%rbp)                    // Store img pointer
+  movl %esi, -44(%rbp)                   // Store center x
+  movl %edx, -48(%rbp)                   // Store center y
+  movl %ecx, -52(%rbp)                   // Store radius
+  movl %r8d, -56(%rbp)                   // Store color
 
   // Calculate bounding box coordinates
-  movl -12(%rbp), %eax                   // Load center x
-  subl -20(%rbp), %eax                   // Subtract radius from center x for start x
-  movl %eax, -28(%rbp)                   // Store start x
-  movl %eax, -32(%rbp)                   // Copy start x to current x
-  movl -12(%rbp), %eax                   // Load center x
-  addl -20(%rbp), %eax                   // Add radius to center x for end x
-  movl %eax, -36(%rbp)                   // Store end x
+  movl -48(%rbp), %eax                   // Load center x
+  subl -52(%rbp), %eax                   // Subtract radius from center x for start x
+  movl %eax, -20(%rbp)                   // Store start x
+  jmp .Lcheck_y
 
-  movl -16(%rbp), %eax                   // Load center y
-  subl -20(%rbp), %eax                   // Subtract radius from center y for start y
-  movl %eax, -40(%rbp)                   // Store start y
-  movl %eax, -44(%rbp)                   // Copy start y to current y
-  movl -16(%rbp), %eax                   // Load center y
-  addl -20(%rbp), %eax                   // Add radius to center y for end y
-  movl %eax, -48(%rbp)                   // Store end y
+.Literate_y:
+  movl    -44(%rbp), %eax
+  subl    -52(%rbp), %eax
+  movl    %eax, -24(%rbp)
+  jmp     .Literate_x
 
-.Lloop_yc:
-  movl -44(%rbp), %eax                   // Load current y
-  cmp %eax, -48(%rbp)                    // Compare current y with end y
-  jge .Ldonec                            // If current y >= end y, we're done
+.Ldraw_check:
+  movl    -48(%rbp), %ecx
+  movl    -44(%rbp), %edx
+  movl    -20(%rbp), %esi
+  movl    -24(%rbp), %eax
+  movl    %eax, %edi
+  movl    $0, %eax
+  call    square_dist
+  movl    %eax, %ebx
+  movl    -52(%rbp), %eax
+  movl    %eax, %edi
+  movl    $0, %eax
+  call    square
+  cmpl    %eax, %ebx
+  jg      .Lnext_pixel
 
-.Lloop_xc:
-  movl -32(%rbp), %eax                   // Load current x
-  cmp %eax, -36(%rbp)                    // Compare current x with end x
-  jge .Lnext_rowc                        // If current x >= end x, prepare for next row
+  movl    -56(%rbp), %ecx
+  movl    -20(%rbp), %edx
+  movl    -24(%rbp), %esi
+  movq    -40(%rbp), %rax
+  movq    %rax, %rdi
+  movl    $0, %eax
+  call    draw_pixel
 
-  // Check if the current point is within the circle
-  movl -32(%rbp), %esi                   // Load current x for distance calculation
-  movl -44(%rbp), %edi                   // Load current y for distance calculation
-  movl -12(%rbp), %edx                   // Load center x for distance calculation
-  movl -16(%rbp), %ecx                   // Load center y for distance calculation
-  call square_dist                      // Calculate square distance
-  movl -20(%rbp), %ebx                   // Load radius
-  imull %ebx, %ebx                       // Square the radius
-  cmp %eax, %ebx                         // Compare squared distance with squared radius
-  jg .Lnext_pixelc                        // Skip to next pixel if outside the circle
+.Lnext_pixel:
+  addl    $1, -24(%rbp)
 
-  // Draw pixel
-  movq -8(%rbp), %rdi                    // Pass img pointer
-  movl -32(%rbp), %esi                   // Pass current x
-  movl -44(%rbp), %edx                   // Pass current y
-  movl -24(%rbp), %ecx                   // Pass color
-  call draw_pixel
+.Literate_x:
+  movl    -44(%rbp), %edx
+  movl    -52(%rbp), %eax
+  addl    %edx, %eax
+  cmpl    %eax, -24(%rbp)
+  jle     .Ldraw_check
+  addl    $1, -20(%rbp)
 
-.Lnext_pixelc:
-  movl -32(%rbp), %eax                   // Reload current x
-  incl %eax                              // Increment current x
-  movl %eax, -32(%rbp)                   // Update current x on the stack
-  jmp .Lloop_xc                          // Continue loop for width
+.Lcheck_y:
+  movl    -48(%rbp), %edx
+  movl    -52(%rbp), %eax
+  addl    %edx, %eax
+  cmpl    %eax, -20(%rbp)
+  jle     .Literate_y
+  movq    -8(%rbp), %rbx
 
-.Lnext_rowc:
-  movl -44(%rbp), %eax                   // Load current y
-  incl %eax                              // Increment current y
-  movl %eax, -44(%rbp)                   // Update current y on the stack
-  movl -28(%rbp), %eax                   // Reset current x back to start x
-  movl %eax, -32(%rbp)                   // Update current x on the stack
-  jmp .Lloop_yc                          // Continue loop for height
-
-.Ldonec:
-  addq $48, %rsp                         // Deallocate space for all local variables
+  addq $56, %rsp                         // Deallocate space for all local variables
+  popq %rbx
   popq %rbp                              // Restore old base pointer
   ret
 /*
