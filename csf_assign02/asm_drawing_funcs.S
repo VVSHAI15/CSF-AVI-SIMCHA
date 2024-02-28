@@ -433,9 +433,66 @@ draw_pixel:
  */
 	.globl draw_rect
 draw_rect:
-	/* TODO: implement */
-	ret
+  pushq %rbp                             // Save old base pointer
+  movq %rsp, %rbp                        // Set new base pointer
+  subq $64, %rsp                         // Allocate space for all local variables
 
+  movq %rdi, -8(%rbp)                    // Store img pointer
+  movl %edx, -12(%rbp)                   // Store color
+
+  // Load and store initial rectangle properties
+  movl RECT_X_OFFSET(%rsi), %eax         // Load rect.x
+  movl %eax, -16(%rbp)                   // Store initial x
+  movl %eax, -24(%rbp)                   // Store current x (start with initial x)
+  
+  movl RECT_Y_OFFSET(%rsi), %eax         // Load rect.y
+  movl %eax, -20(%rbp)                   // Store initial y
+  movl %eax, -28(%rbp)                   // Store current y (start with initial y)
+
+  // Calculate and store endx and endy
+  movl RECT_WIDTH_OFFSET(%rsi), %eax     // Load rect.width
+  addl -16(%rbp), %eax                   // Add initial x to width
+  movl %eax, -32(%rbp)                   // Store end x
+  
+  movl RECT_HEIGHT_OFFSET(%rsi), %eax    // Load rect.height
+  addl -20(%rbp), %eax                   // Add initial y to height
+  movl %eax, -36(%rbp)                   // Store end y
+
+.Lloop_y:
+  movl -28(%rbp), %eax                   // Load current y
+  cmp %eax, -36(%rbp)                    // Compare current y with end y
+  jge .Ldone                             // If current y >= end y, we're done
+
+  movl -16(%rbp), %eax
+  movl %eax, -24(%rbp)                   // reset x back to its intial value
+
+.Lloop_x:
+  movl -24(%rbp), %eax                   // Load current x
+  cmp %eax, -32(%rbp)                    // Compare current x with end x
+  jge .Lnext_row                          // If current x >= end x, prepare for next row
+
+  // Draw pixel
+  movq -8(%rbp), %rdi                    // Pass img pointer
+  movl %eax, %esi                        // Pass current x
+  movl -28(%rbp), %edx                   // Pass current y
+  movl -12(%rbp), %ecx                   // Pass color
+  call draw_pixel
+
+  movl -24(%rbp), %eax                   // Load current x
+  incl %eax                              // Increment current x
+  movl %eax, -24(%rbp)                   // Update current x on the stack
+  jmp .Lloop_x                           // Continue loop for width
+
+.Lnext_row:
+  movl -28(%rbp), %eax                   // Load current y
+  incl %eax                              // Increment current y
+  movl %eax, -28(%rbp)                   // Update current y on the stack
+  jmp .Lloop_y                            // Continue loop for height
+
+.Ldone:
+  addq $64, %rsp                         // Deallocate space for all local variables
+  popq %rbp                              // Restore old base pointer
+  ret            
 /*
  * Draw a circle.
  * The circle has x,y as its center and has r as its radius.
@@ -449,9 +506,8 @@ draw_rect:
  */
 	.globl draw_circle
 draw_circle:
-	/* TODO: implement */
-	ret
 
+    ret
 /*
  * Draw a tile by copying all pixels in the region
  * enclosed by the tile parameter in the tilemap image
