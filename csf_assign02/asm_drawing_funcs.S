@@ -433,57 +433,57 @@ draw_pixel:
  */
 	.globl draw_rect
 draw_rect:
-        pushq   %rbp                              // Save base pointer
-        movq    %rsp, %rbp                        // Set base pointer to current stack pointer
-        subq    $48, %rsp                         // Allocate space for local variables
+  pushq   %rbp                              // Save base pointer
+  movq    %rsp, %rbp                        // Set base pointer to current stack pointer
+  subq    $48, %rsp                         // Allocate space for local variables
 
-        movq    %rdi, -24(%rbp)                   // Store Image pointer
-        movq    %rsi, -32(%rbp)                   // Store Rect pointer
-        movl    %edx, -36(%rbp)                   // Store color value
-        movq    -32(%rbp), %rax                   // Load Rect pointer
-        movl    4(%rax), %eax                     // Load Rect.y into %eax
-        movl    %eax, -4(%rbp)                    // Store Rect.y in local variable
-        jmp     .Lcheck_height_condition          // Jump to height check loop
+  movq    %rdi, -24(%rbp)                   // Store Image pointer
+  movq    %rsi, -32(%rbp)                   // Store Rect pointer
+  movl    %edx, -36(%rbp)                   // Store color value
+  movq    -32(%rbp), %rax                   // Load Rect pointer
+  movl    4(%rax), %eax                     // Load Rect.y into %eax
+  movl    %eax, -4(%rbp)                    // Store Rect.y in local variable
+  jmp     .Lcheck_height_condition          // Jump to height check loop
 
 .Lstart_height_loop:                              // Start of loop for rectangle height
-        movq    -32(%rbp), %rax                   // Load Rect pointer
-        movl    (%rax), %eax                      // Load Rect.x into %eax
-        movl    %eax, -8(%rbp)                    // Store Rect.x in local variable
-        jmp     .Lcheck_width_condition           // Jump to width check loop
+  movq    -32(%rbp), %rax                   // Load Rect pointer
+  movl    (%rax), %eax                      // Load Rect.x into %eax
+  movl    %eax, -8(%rbp)                    // Store Rect.x in local variable
+  jmp     .Lcheck_width_condition           // Jump to width check loop
 
 .Lstart_width_loop:                               // Start of loop for rectangle width
-        movl    -36(%rbp), %ecx                   // Load color value into %ecx
-        movl    -4(%rbp), %edx                    // Load current y coordinate into %edx
-        movl    -8(%rbp), %esi                    // Load current x coordinate into %esi
-        movq    -24(%rbp), %rax                   // Load Image pointer into %rax
-        movq    %rax, %rdi                        // Set Image pointer as first argument
-        movl    $0, %eax                          // Zero out %eax (for some calling conventions)
-        call    draw_pixel                        // Call draw_pixel function
-        addl    $1, -8(%rbp)                      // Increment x coordinate
+  movl    -36(%rbp), %ecx                   // Load color value into %ecx
+  movl    -4(%rbp), %edx                    // Load current y coordinate into %edx
+  movl    -8(%rbp), %esi                    // Load current x coordinate into %esi
+  movq    -24(%rbp), %rax                   // Load Image pointer into %rax
+  movq    %rax, %rdi                        // Set Image pointer as first argument
+  movl    $0, %eax                          // Zero out %eax (for some calling conventions)
+  call    draw_pixel                        // Call draw_pixel function
+  addl    $1, -8(%rbp)                      // Increment x coordinate
 
 .Lcheck_width_condition:                          // Check if current x is within rectangle width
-        movq    -32(%rbp), %rax                   // Load Rect pointer
-        movl    (%rax), %edx                      // Load Rect.x into %edx
-        movq    -32(%rbp), %rax                   // Load Rect pointer again
-        movl    8(%rax), %eax                     // Load Rect.width into %eax
-        addl    %edx, %eax                        // Add Rect.x to Rect.width
-        cmpl    %eax, -8(%rbp)                    // Compare with current x
-        jl      .Lstart_width_loop                // If current x is less, loop
+  movq    -32(%rbp), %rax                   // Load Rect pointer
+  movl    (%rax), %edx                      // Load Rect.x into %edx
+  movq    -32(%rbp), %rax                   // Load Rect pointer again
+  movl    8(%rax), %eax                     // Load Rect.width into %eax
+  addl    %edx, %eax                        // Add Rect.x to Rect.width
+  cmpl    %eax, -8(%rbp)                    // Compare with current x
+  jl      .Lstart_width_loop                // If current x is less, loop
 
-        addl    $1, -4(%rbp)                      // Increment y coordinate
+  addl    $1, -4(%rbp)                      // Increment y coordinate
 
 .Lcheck_height_condition:                         // Check if current y is within rectangle height
-        movq    -32(%rbp), %rax                   // Load Rect pointer
-        movl    4(%rax), %edx                     // Load Rect.y into %edx
-        movq    -32(%rbp), %rax                   // Load Rect pointer again
-        movl    12(%rax), %eax                    // Load Rect.height into %eax
-        addl    %edx, %eax                        // Add Rect.y to Rect.height
-        cmpl    %eax, -4(%rbp)                    // Compare with current y
-        jl      .Lstart_height_loop               // If current y is less, loop
+  movq    -32(%rbp), %rax                   // Load Rect pointer
+  movl    4(%rax), %edx                     // Load Rect.y into %edx
+  movq    -32(%rbp), %rax                   // Load Rect pointer again
+  movl    12(%rax), %eax                    // Load Rect.height into %eax
+  addl    %edx, %eax                        // Add Rect.y to Rect.height
+  cmpl    %eax, -4(%rbp)                    // Compare with current y
+  jl      .Lstart_height_loop               // If current y is less, loop
 
-        addq    $48, %rsp                         // Deallocate space for all local variables
-        popq    %rbp                              // Restore old base pointer
-        ret             
+  addq    $48, %rsp                         // Deallocate space for all local variables
+  popq    %rbp                              // Restore old base pointer
+  ret             
 /*
  * Draw a circle.
  * The circle has x,y as its center and has r as its radius.
@@ -587,102 +587,102 @@ draw_circle:
  */
 	.globl draw_tile
 draw_tile:
-        pushq   %rbp                              // Save the old base pointer
-        movq    %rsp, %rbp                        // Set the new base pointer
-        subq    $64, %rsp                         // Allocate space for local variables
+  pushq   %rbp                              // Save the old base pointer
+  movq    %rsp, %rbp                        // Set the new base pointer
+  subq    $64, %rsp                         // Allocate space for local variables
 
-        // Store function arguments in local variables
-        movq    %rdi, -40(%rbp)                   // Store destination image pointer
-        movl    %esi, -44(%rbp)                   // Store x position
-        movl    %edx, -48(%rbp)                   // Store y position
-        movq    %rcx, -56(%rbp)                   // Store pointer to dimensions/size
-        movq    %r8, -64(%rbp)                    // Store source image/tile pointer
+  // Store function arguments in local variables
+  movq    %rdi, -40(%rbp)                   // Store destination image pointer
+  movl    %esi, -44(%rbp)                   // Store x position
+  movl    %edx, -48(%rbp)                   // Store y position
+  movq    %rcx, -56(%rbp)                   // Store pointer to dimensions/size
+  movq    %r8, -64(%rbp)                    // Store source image/tile pointer
 
-        // Validate width and height of the source tile to be positive
-        movq    -64(%rbp), %rax
-        movl    (%rax), %eax
-        testl   %eax, %eax
-        js      .Lskip_drawing                    // Jump if source width is negative
+  // Validate width and height of the source tile to be positive
+  movq    -64(%rbp), %rax
+  movl    (%rax), %eax
+  testl   %eax, %eax
+  js      .Lskip_drawing                    // Jump if source width is negative
 
-        movq    -64(%rbp), %rax
-        movl    4(%rax), %eax
-        testl   %eax, %eax
-        js      .Lskip_drawing                    // Jump if source height is negative
+  movq    -64(%rbp), %rax
+  movl    4(%rax), %eax
+  testl   %eax, %eax
+  js      .Lskip_drawing                    // Jump if source height is negative
 
-        // Check if the source tile fits within the destination image dimensions
-        movq    -64(%rbp), %rax
-        movl    (%rax), %edx                      // Load source width
-        movq    -64(%rbp), %rax
-        movl    8(%rax), %eax                     // Load x offset
-        addl    %edx, %eax                        // Calculate end x position
-        movl    %eax, %edx
-        movq    -56(%rbp), %rax
-        movl    (%rax), %eax                      // Load destination width
-        cmpl    %edx, %eax
-        jb      .Lskip_drawing                    // Jump if end x is out of bounds
+  // Check if the source tile fits within the destination image dimensions
+  movq    -64(%rbp), %rax
+  movl    (%rax), %edx                      // Load source width
+  movq    -64(%rbp), %rax
+  movl    8(%rax), %eax                     // Load x offset
+  addl    %edx, %eax                        // Calculate end x position
+  movl    %eax, %edx
+  movq    -56(%rbp), %rax
+  movl    (%rax), %eax                      // Load destination width
+  cmpl    %edx, %eax
+  jb      .Lskip_drawing                    // Jump if end x is out of bounds
 
-        movq    -64(%rbp), %rax
-        movl    4(%rax), %edx                     // Load source height
-        movq    -64(%rbp), %rax
-        movl    12(%rax), %eax                    // Load y offset
-        addl    %edx, %eax                        // Calculate end y position
-        movl    %eax, %edx
-        movq    -56(%rbp), %rax
-        movl    4(%rax), %eax                     // Load destination height
-        cmpl    %edx, %eax
-        jb      .Lskip_drawing                    // Jump if end y is out of bounds
+  movq    -64(%rbp), %rax
+  movl    4(%rax), %edx                     // Load source height
+  movq    -64(%rbp), %rax
+  movl    12(%rax), %eax                    // Load y offset
+  addl    %edx, %eax                        // Calculate end y position
+  movl    %eax, %edx
+  movq    -56(%rbp), %rax
+  movl    4(%rax), %eax                     // Load destination height
+  cmpl    %edx, %eax
+  jb      .Lskip_drawing                    // Jump if end y is out of bounds
 
-        movl    $0, -4(%rbp)                      // Set initial y loop counter
+  movl    $0, -4(%rbp)                      // Set initial y loop counter
 
 .Literate_rows:
-        movl    -48(%rbp), %edx                   // Load y position
-        movl    -4(%rbp), %eax                    // Load current y loop counter
-        addl    %edx, %eax                        // Add y position to loop counter
-        movl    %eax, -12(%rbp)                   // Store global y position
-        cmpl    $0, -12(%rbp)                     // Check if global y position is valid
-        js      .Lnext_row                        // Skip to next row if invalid
+  movl    -48(%rbp), %edx                   // Load y position
+  movl    -4(%rbp), %eax                    // Load current y loop counter
+  addl    %edx, %eax                        // Add y position to loop counter
+  movl    %eax, -12(%rbp)                   // Store global y position
+  cmpl    $0, -12(%rbp)                     // Check if global y position is valid
+  js      .Lnext_row                        // Skip to next row if invalid
 
-        movq    -40(%rbp), %rax
-        movl    4(%rax), %eax                     // Load destination height
-        movl    -12(%rbp), %edx                   // Load global y position
-        cmpl    %eax, %edx                        // Compare global y position with destination height
-        jnb     .Lnext_row                        // Skip to next row if out of bounds
+  movq    -40(%rbp), %rax
+  movl    4(%rax), %eax                     // Load destination height
+  movl    -12(%rbp), %edx                   // Load global y position
+  cmpl    %eax, %edx                        // Compare global y position with destination height
+  jnb     .Lnext_row                        // Skip to next row if out of bounds
 
-        // Initialize loop variables for x-axis iteration
-        movl    $0, -8(%rbp)                      // Set initial x loop counter
+  // Initialize loop variables for x-axis iteration
+  movl    $0, -8(%rbp)                      // Set initial x loop counter
 
 .Literate_columns:
-        movl    -44(%rbp), %edx                   // Load x position
-        movl    -8(%rbp), %eax                    // Load current x loop counter
-        addl    %edx, %eax                        // Add x position to loop counter
-        movl    %eax, -16(%rbp)                   // Store global x position
-        cmpl    $0, -16(%rbp)                     // Check if global x position is valid
-        js      .Lnext_column                     // Skip to next column if invalid
+  movl    -44(%rbp), %edx                   // Load x position
+  movl    -8(%rbp), %eax                    // Load current x loop counter
+  addl    %edx, %eax                        // Add x position to loop counter
+  movl    %eax, -16(%rbp)                   // Store global x position
+  cmpl    $0, -16(%rbp)                     // Check if global x position is valid
+  js      .Lnext_column                     // Skip to next column if invalid
 
-        movq    -40(%rbp), %rax
-        movl    (%rax), %eax                      // Load destination width
-        movl    -16(%rbp), %edx                   // Load global x position
-        cmpl    %eax, %edx                        // Compare global x position with destination width
-        jnb     .Lnext_column                     // Skip to next column if out of bounds
+  movq    -40(%rbp), %rax
+  movl    (%rax), %eax                      // Load destination width
+  movl    -16(%rbp), %edx                   // Load global x position
+  cmpl    %eax, %edx                        // Compare global x position with destination width
+  jnb     .Lnext_column                     // Skip to next column if out of bounds
 
 .Lnext_column:
-        addl    $1, -8(%rbp)                      // Increment x loop counter
-        movq    -64(%rbp), %rax
-        movl    8(%rax), %eax                     // Load source width
-        cmpl    %eax, -8(%rbp)                    // Check if loop counter exceeds source width
-        jl      .Literate_columns                 // Continue looping over columns if not exceeded
+  addl    $1, -8(%rbp)                      // Increment x loop counter
+  movq    -64(%rbp), %rax
+  movl    8(%rax), %eax                     // Load source width
+  cmpl    %eax, -8(%rbp)                    // Check if loop counter exceeds source width
+  jl      .Literate_columns                 // Continue looping over columns if not exceeded
 
 .Lnext_row:
-        addl    $1, -4(%rbp)                      // Increment y loop counter
-        movq    -64(%rbp), %rax
-        movl    12(%rax), %eax                    // Load source height
-        cmpl    %eax, -4(%rbp)                    // Check if loop counter exceeds source height
-        jl      .Literate_rows                    // Continue looping over rows if not exceeded
+  addl    $1, -4(%rbp)                      // Increment y loop counter
+  movq    -64(%rbp), %rax
+  movl    12(%rax), %eax                    // Load source height
+  cmpl    %eax, -4(%rbp)                    // Check if loop counter exceeds source height
+  jl      .Literate_rows                    // Continue looping over rows if not exceeded
 
 .Lskip_drawing:
-        addq $64, %rsp                           // Deallocate space for local variables
-        popq    %rbp                             // Restore the old base pointer
-        ret         
+  addq $64, %rsp                           // Deallocate space for local variables
+  popq    %rbp                             // Restore the old base pointer
+  ret         
 /*
  * Draw a sprite by copying all pixels in the region
  * enclosed by the sprite parameter in the spritemap image
@@ -822,6 +822,6 @@ draw_sprite:
   jmp     .L1
 
 .L1:
-  addq $64, %rsp                           // Deallocate space for local variables
-  popq    %rbp                             // Restore the old base pointer
-  ret
+    addq $64, %rsp                           // Deallocate space for local variables
+    popq    %rbp                             // Restore the old base pointer
+    ret
