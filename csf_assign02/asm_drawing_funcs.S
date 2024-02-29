@@ -445,13 +445,13 @@ draw_rect:
   movl    %eax, -4(%rbp)                    // Store Rect.y in local variable
   jmp     .Lcheck_height_condition          // Jump to height check loop
 
-.Lstart_height_loop:                              // Start of loop for rectangle height
+.Lstart_height_loop:                        // Start of loop for rectangle height
   movq    -32(%rbp), %rax                   // Load Rect pointer
   movl    (%rax), %eax                      // Load Rect.x into %eax
   movl    %eax, -8(%rbp)                    // Store Rect.x in local variable
   jmp     .Lcheck_width_condition           // Jump to width check loop
 
-.Lstart_width_loop:                               // Start of loop for rectangle width
+.Lstart_width_loop:                         // Start of loop for rectangle width
   movl    -36(%rbp), %ecx                   // Load color value into %ecx
   movl    -4(%rbp), %edx                    // Load current y coordinate into %edx
   movl    -8(%rbp), %esi                    // Load current x coordinate into %esi
@@ -461,7 +461,7 @@ draw_rect:
   call    draw_pixel                        // Call draw_pixel function
   addl    $1, -8(%rbp)                      // Increment x coordinate
 
-.Lcheck_width_condition:                          // Check if current x is within rectangle width
+.Lcheck_width_condition:                    // Check if current x is within rectangle width
   movq    -32(%rbp), %rax                   // Load Rect pointer
   movl    (%rax), %edx                      // Load Rect.x into %edx
   movq    -32(%rbp), %rax                   // Load Rect pointer again
@@ -472,7 +472,7 @@ draw_rect:
 
   addl    $1, -4(%rbp)                      // Increment y coordinate
 
-.Lcheck_height_condition:                         // Check if current y is within rectangle height
+.Lcheck_height_condition:                   // Check if current y is within rectangle height
   movq    -32(%rbp), %rax                   // Load Rect pointer
   movl    4(%rax), %edx                     // Load Rect.y into %edx
   movq    -32(%rbp), %rax                   // Load Rect pointer again
