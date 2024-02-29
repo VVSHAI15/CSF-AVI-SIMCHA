@@ -604,10 +604,6 @@ draw_tile:
   testl   %eax, %eax
   js      .Lskip_drawing                    // Jump if source width is negative
 
-  movq    -64(%rbp), %rax
-  movl    4(%rax), %eax
-  testl   %eax, %eax
-  js      .Lskip_drawing                    // Jump if source height is negative
 
   // Check if the source tile fits within the destination image dimensions
   movq    -64(%rbp), %rax
@@ -658,12 +654,6 @@ draw_tile:
   movl    %eax, -16(%rbp)                   // Store global x position
   cmpl    $0, -16(%rbp)                     // Check if global x position is valid
   js      .Lnext_column                     // Skip to next column if invalid
-
-  movq    -40(%rbp), %rax
-  movl    (%rax), %eax                      // Load destination width
-  movl    -16(%rbp), %edx                   // Load global x position
-  cmpl    %eax, %edx                        // Compare global x position with destination width
-  jnb     .Lnext_column                     // Skip to next column if out of bounds
 
 .Lnext_column:
   addl    $1, -8(%rbp)                      // Increment x loop counter
