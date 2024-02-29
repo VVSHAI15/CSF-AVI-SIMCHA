@@ -497,7 +497,7 @@ draw_rect:
  */
 	.globl draw_circle
 draw_circle:
-  pushq %rbp                           // Save old base pointer
+  pushq %rbp                             // Save old base pointer
   movq %rsp, %rbp                        // Set new base pointer
   pushq %rbx                             // Save RBX register (used for preserving callee-saved register)
   subq $56, %rsp                         // Allocate space for local variables
@@ -571,6 +571,7 @@ draw_circle:
   popq %rbx                             
   popq %rbp                              // Restore old base pointer
   ret   
+  
 /*
  * Draw a tile by copying all pixels in the region
  * enclosed by the tile parameter in the tilemap image
