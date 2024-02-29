@@ -589,7 +589,7 @@ draw_circle:
 draw_tile:
         pushq   %rbp                              // Save the old base pointer
         movq    %rsp, %rbp                        // Set the new base pointer
-        subq $64, %rsp                            // Allocate space for local variables
+        subq    $64, %rsp                         // Allocate space for local variables
 
         // Store function arguments in local variables
         movq    %rdi, -40(%rbp)                   // Store destination image pointer
@@ -602,12 +602,12 @@ draw_tile:
         movq    -64(%rbp), %rax
         movl    (%rax), %eax
         testl   %eax, %eax
-        js      skip_drawing                      // Jump if source width is negative
+        js      .Lskip_drawing                    // Jump if source width is negative
 
         movq    -64(%rbp), %rax
         movl    4(%rax), %eax
         testl   %eax, %eax
-        js      skip_drawing                      // Jump if source height is negative
+        js      .Lskip_drawing                    // Jump if source height is negative
 
         // Check if the source tile fits within the destination image dimensions
         movq    -64(%rbp), %rax
@@ -619,7 +619,7 @@ draw_tile:
         movq    -56(%rbp), %rax
         movl    (%rax), %eax                      // Load destination width
         cmpl    %edx, %eax
-        jb      skip_drawing                      // Jump if end x is out of bounds
+        jb      .Lskip_drawing                    // Jump if end x is out of bounds
 
         movq    -64(%rbp), %rax
         movl    4(%rax), %edx                     // Load source height
@@ -630,60 +630,57 @@ draw_tile:
         movq    -56(%rbp), %rax
         movl    4(%rax), %eax                     // Load destination height
         cmpl    %edx, %eax
-        jb      skip_drawing                      // Jump if end y is out of bounds
+        jb      .Lskip_drawing                    // Jump if end y is out of bounds
 
-        // Initialize loop variables for y-axis iteration
         movl    $0, -4(%rbp)                      // Set initial y loop counter
 
-iterate_rows:
-        // Calculate global y position (y position within the destination)
+.Literate_rows:
         movl    -48(%rbp), %edx                   // Load y position
         movl    -4(%rbp), %eax                    // Load current y loop counter
         addl    %edx, %eax                        // Add y position to loop counter
         movl    %eax, -12(%rbp)                   // Store global y position
         cmpl    $0, -12(%rbp)                     // Check if global y position is valid
-        js      next_row                          // Skip to next row if invalid
+        js      .Lnext_row                        // Skip to next row if invalid
 
         movq    -40(%rbp), %rax
         movl    4(%rax), %eax                     // Load destination height
         movl    -12(%rbp), %edx                   // Load global y position
         cmpl    %eax, %edx                        // Compare global y position with destination height
-        jnb     next_row                          // Skip to next row if out of bounds
+        jnb     .Lnext_row                        // Skip to next row if out of bounds
 
         // Initialize loop variables for x-axis iteration
         movl    $0, -8(%rbp)                      // Set initial x loop counter
 
-iterate_columns:
-        // Calculate global x position (x position within the destination)
+.Literate_columns:
         movl    -44(%rbp), %edx                   // Load x position
         movl    -8(%rbp), %eax                    // Load current x loop counter
         addl    %edx, %eax                        // Add x position to loop counter
         movl    %eax, -16(%rbp)                   // Store global x position
         cmpl    $0, -16(%rbp)                     // Check if global x position is valid
-        js      next_column                       // Skip to next column if invalid
+        js      .Lnext_column                     // Skip to next column if invalid
 
         movq    -40(%rbp), %rax
         movl    (%rax), %eax                      // Load destination width
         movl    -16(%rbp), %edx                   // Load global x position
         cmpl    %eax, %edx                        // Compare global x position with destination width
-        jnb     next_column                       // Skip to next column if out of bounds
+        jnb     .Lnext_column                     // Skip to next column if out of bounds
 
-next_column:
+.Lnext_column:
         addl    $1, -8(%rbp)                      // Increment x loop counter
         movq    -64(%rbp), %rax
         movl    8(%rax), %eax                     // Load source width
         cmpl    %eax, -8(%rbp)                    // Check if loop counter exceeds source width
-        jl      iterate_columns                   // Continue looping over columns if not exceeded
+        jl      .Literate_columns                 // Continue looping over columns if not exceeded
 
-next_row:
+.Lnext_row:
         addl    $1, -4(%rbp)                      // Increment y loop counter
         movq    -64(%rbp), %rax
         movl    12(%rax), %eax                    // Load source height
         cmpl    %eax, -4(%rbp)                    // Check if loop counter exceeds source height
-        jl      iterate_rows                      // Continue looping over rows if not exceeded
+        jl      .Literate_rows                    // Continue looping over rows if not exceeded
 
-skip_drawing:
-        addq $64, %rsp                         // Deallocate space for local variables
+.Lskip_drawing:
+        addq $64, %rsp                           // Deallocate space for local variables
         popq    %rbp                             // Restore the old base pointer
         ret         
 /*
