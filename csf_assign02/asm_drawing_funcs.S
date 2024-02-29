@@ -700,143 +700,128 @@ draw_tile:
  */
 	.globl draw_sprite
 draw_sprite:
-	draw_sprite:
-        pushq   %rbp
-        movq    %rsp, %rbp
-        subq    $64, %rsp
-        movq    %rdi, -40(%rbp)
-        movl    %esi, -44(%rbp)
-        movl    %edx, -48(%rbp)
-        movq    %rcx, -56(%rbp)
-        movq    %r8, -64(%rbp)
-        movq    -64(%rbp), %rax
-        movl    (%rax), %eax
-        testl   %eax, %eax
-        js      .L15
-        movq    -64(%rbp), %rax
-        movl    4(%rax), %eax
-        testl   %eax, %eax
-        js      .L15
-        movq    -64(%rbp), %rax
-        movl    (%rax), %edx
-        movq    -64(%rbp), %rax
-        movl    8(%rax), %eax
-        addl    %edx, %eax
-        movl    %eax, %edx
-        movq    -56(%rbp), %rax
-        movl    (%rax), %eax
-        cmpl    %edx, %eax
-        jb      .L15
-        movq    -64(%rbp), %rax
-        movl    4(%rax), %edx
-        movq    -64(%rbp), %rax
-        movl    12(%rax), %eax
-        addl    %edx, %eax
-        movl    %eax, %edx
-        movq    -56(%rbp), %rax
-        movl    4(%rax), %eax
-        cmpl    %edx, %eax
-        jb      .L15
-        movl    $0, -4(%rbp)
-        jmp     .L50
-.L14:
-        movl    -48(%rbp), %edx
-        movl    -4(%rbp), %eax
-        addl    %edx, %eax
-        movl    %eax, -12(%rbp)
-        cmpl    $0, -12(%rbp)
-        js      .L16
-        movq    -40(%rbp), %rax
-        movl    4(%rax), %eax
-        movl    -12(%rbp), %edx
-        cmpl    %eax, %edx
-        jnb     .L16
-        movl    $0, -8(%rbp)
-        jmp     .L9
-.L13:
-        movl    -44(%rbp), %edx
-        movl    -8(%rbp), %eax
-        addl    %edx, %eax
-        movl    %eax, -16(%rbp)
-        cmpl    $0, -16(%rbp)
-        js      .L17
-        movq    -40(%rbp), %rax
-        movl    (%rax), %eax
-        movl    -16(%rbp), %edx
-        cmpl    %eax, %edx
-        jnb     .L17
-        movq    -64(%rbp), %rax
-        movl    4(%rax), %edx
-        movl    -4(%rbp), %eax
-        addl    %edx, %eax
-        movl    %eax, %edx
-        movq    -56(%rbp), %rax
-        movl    (%rax), %eax
-        imull   %eax, %edx
-        movq    -64(%rbp), %rax
-        movl    (%rax), %ecx
-        movl    -8(%rbp), %eax
-        addl    %ecx, %eax
-        addl    %edx, %eax
-        movl    %eax, -20(%rbp)
-        movq    -40(%rbp), %rax
-        movl    (%rax), %edx
-        movl    -12(%rbp), %eax
-        imull   %eax, %edx
-        movl    -16(%rbp), %eax
-        addl    %edx, %eax
-        movl    %eax, -24(%rbp)
-        movq    -40(%rbp), %rax
-        movq    8(%rax), %rax
-        movl    -24(%rbp), %edx
-        salq    $2, %rdx
-        addq    %rdx, %rax
-        movl    (%rax), %edx
-        movq    -56(%rbp), %rax
-        movq    8(%rax), %rax
-        movl    -20(%rbp), %ecx
-        salq    $2, %rcx
-        addq    %rcx, %rax
-        movl    (%rax), %eax
-        movl    %edx, %esi
-        movl    %eax, %edi
-        movl    $0, %eax
-        call    blend_colors
-        movl    %eax, %ecx
-        movq    -40(%rbp), %rax
-        movq    8(%rax), %rax
-        movl    -24(%rbp), %edx
-        salq    $2, %rdx
-        addq    %rdx, %rax
-        movl    %ecx, %edx
-        movl    %edx, (%rax)
-        jmp     .L12
-.L17:
-        nop
-.L12:
-        addl    $1, -8(%rbp)
-.L9:
-        movq    -64(%rbp), %rax
-        movl    8(%rax), %eax
-        cmpl    %eax, -8(%rbp)
-        jl      .L13
-        jmp     .L8
-.L16:
-        nop
-.L8:
-        addl    $1, -4(%rbp)
-.L50:
-        movq    -64(%rbp), %rax
-        movl    12(%rax), %eax
-        cmpl    %eax, -4(%rbp)
-        jl      .L14
-        jmp     .L1
-.L15:
-        nop
-.L1:
-        leave
-        ret
+  pushq   %rbp
+  movq    %rsp, %rbp
+  subq    $64, %rsp
+  movq    %rdi, -40(%rbp)
+  movl    %esi, -44(%rbp)
+  movl    %edx, -48(%rbp)
+  movq    %rcx, -56(%rbp)
+  movq    %r8, -64(%rbp)
 
-/*
-vim:ft=gas:
-*/
+  movq    -64(%rbp), %rax
+  movl    (%rax), %eax
+  testl   %eax, %eax
+  js      .L1
+
+
+  movq    -64(%rbp), %rax
+  movl    (%rax), %edx
+  movq    -64(%rbp), %rax
+  movl    8(%rax), %eax
+  addl    %edx, %eax
+  movl    %eax, %edx
+  movq    -56(%rbp), %rax
+  movl    (%rax), %eax
+  cmpl    %edx, %eax
+  jb      .L1
+
+  movl    $0, -4(%rbp)
+  jmp     .L50
+.L14:
+  movl    -48(%rbp), %edx
+  movl    -4(%rbp), %eax
+  addl    %edx, %eax
+  movl    %eax, -12(%rbp)
+  cmpl    $0, -12(%rbp)
+  js      .L8
+
+  movq    -40(%rbp), %rax
+  movl    4(%rax), %eax
+  movl    -12(%rbp), %edx
+  cmpl    %eax, %edx
+  jnb     .L8
+  movl    $0, -8(%rbp)
+  jmp     .L9
+.L13:
+  movl    -44(%rbp), %edx
+  movl    -8(%rbp), %eax
+  addl    %edx, %eax
+  movl    %eax, -16(%rbp)
+  cmpl    $0, -16(%rbp)
+  js      .L12
+
+  movq    -40(%rbp), %rax
+  movl    (%rax), %eax
+  movl    -16(%rbp), %edx
+  cmpl    %eax, %edx
+  jnb     .L12
+  
+  movq    -64(%rbp), %rax
+  movl    4(%rax), %edx
+  movl    -4(%rbp), %eax
+  addl    %edx, %eax
+  movl    %eax, %edx
+  movq    -56(%rbp), %rax
+  movl    (%rax), %eax
+  imull   %eax, %edx
+  movq    -64(%rbp), %rax
+  movl    (%rax), %ecx
+  movl    -8(%rbp), %eax
+  addl    %ecx, %eax
+  addl    %edx, %eax
+  movl    %eax, -20(%rbp)
+  movq    -40(%rbp), %rax
+  movl    (%rax), %edx
+  movl    -12(%rbp), %eax
+  imull   %eax, %edx
+  movl    -16(%rbp), %eax
+  addl    %edx, %eax
+  movl    %eax, -24(%rbp)
+  movq    -40(%rbp), %rax
+  movq    8(%rax), %rax
+  movl    -24(%rbp), %edx
+  salq    $2, %rdx
+  addq    %rdx, %rax
+  movl    (%rax), %edx
+  movq    -56(%rbp), %rax
+  movq    8(%rax), %rax
+  movl    -20(%rbp), %ecx
+  salq    $2, %rcx
+  addq    %rcx, %rax
+  movl    (%rax), %eax
+  movl    %edx, %esi
+  movl    %eax, %edi
+  movl    $0, %eax
+  call    blend_colors
+  movl    %eax, %ecx
+  movq    -40(%rbp), %rax
+  movq    8(%rax), %rax
+  movl    -24(%rbp), %edx
+  salq    $2, %rdx
+  addq    %rdx, %rax
+  movl    %ecx, %edx
+  movl    %edx, (%rax)
+  jmp     .L12
+
+.L12:
+  addl    $1, -8(%rbp)
+.L9:
+  movq    -64(%rbp), %rax
+  movl    8(%rax), %eax
+  cmpl    %eax, -8(%rbp)
+  jl      .L13
+  jmp     .L8
+.L8:
+  addl    $1, -4(%rbp)
+.L50:
+  movq    -64(%rbp), %rax
+  movl    12(%rax), %eax
+  cmpl    %eax, -4(%rbp)
+  jl      .L14
+  jmp     .L1
+
+.L1:
+  addq $64, %rsp                           // Deallocate space for local variables
+  popq    %rbp                             // Restore the old base pointer
+  ret
