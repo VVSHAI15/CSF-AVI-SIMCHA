@@ -1,6 +1,4 @@
-
 #include "cache.h"
-
 #include "helper_functions.h"
 #include <iostream>
 
@@ -48,5 +46,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  totalL();
   return 0;
 }
