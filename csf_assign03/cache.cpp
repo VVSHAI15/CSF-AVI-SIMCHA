@@ -1,75 +1,91 @@
-
 #include "cache.h"
 #include "helper_functions.h"
 #include <iostream>
 
-uint32_t counter = 0;
-uint32_t loadMisses = 0;
-uint32_t loadHits = 0;
-uint32_t save_hits = 0;
-uint32_t save_misses = 0;
-uint32_t multiplied_cycles = 0;
-uint32_t total_cycles = 0;
+Cache::Cache(bool wrAlloc, bool wrThrough, bool Fifo, uint32_t numSets,
+             uint32_t numBlocks)
+    : wrAlloc(wrAlloc), wrThrough(wrThrough), Fifo(Fifo), numSets(numSets),
+      numBlocks(numBlocks) {
+  sets.resize(numSets); // Ensure there are 'numSets' sets
+  for (auto &set : sets) {
+    set.blocks.resize(numBlocks); // Ensure each set has 'numBlocks' blocks
+  }
+}
 
 void operateL(Cache *c, uint32_t setIndex, uint32_t tag, uint32_t block_size) {
+  // Access the set within the cache using the set index
   Set &s = c->sets.at(setIndex);
+
+  // Attempt to find the block with the given tag in the set
   auto i = s.index.find(tag);
+
+  // If a block with the tag exists (cache hit)
   if (i != s.index.end()) {
-    // if hit update accordingly
+    // Retrieve the index of the block within the set
     uint32_t index_of_slot = i->second;
-    // if fifo update for hit
-    if (!c->Fifo)
-      s.blocks.at(index_of_slot).timeStamp = counter++;
-    loadHits++;
+
+    // If using FIFO, no need to update the timestamp; otherwise, update it for
+    // LRU
+    if (!c->Fifo) {
+      s.blocks.at(index_of_slot).timeStamp = c->counter++;
+    }
+
+    // Increment load hit count
+    c->loadHits++;
   } else {
+    // Initialize variables to find either an invalid block or the least
+    // recently used one
     uint32_t index_of_min = 0;
-    uint32_t min_val = 0xffffffff;
-    // loop through, if there is an invalid block found update that, and if not
-    // replace the block with the lowest ts
+    uint32_t min_val =
+        UINT32_MAX; // Use UINT32_MAX for maximum unsigned int value
+
+    // Iterate over all blocks in the set
     for (uint32_t i = 0; i < s.blocks.size(); i++) {
+      // If a block is valid, check if it has the minimum timestamp
       if (s.blocks.at(i).valid) {
         if (min_val > s.blocks.at(i).timeStamp) {
-          // update the min val if needed
           min_val = s.blocks.at(i).timeStamp;
           index_of_min = i;
         }
       } else {
-        // if an invalid block found replace it
+        // If found an invalid block, replace it and return immediately
         replace_block(i, tag, &s.blocks.at(i), &s, true, c->wrThrough,
-                      block_size);
+                      block_size, c);
         return;
       }
     }
-    // no invalid block found, updatet the block with the lowest timestamp
+
+    // If no invalid block is found, replace the block with the minimum
+    // timestamp (least recently used or FIFO order)
     uint32_t tmp = s.blocks.at(index_of_min).tag;
     replace_block(index_of_min, tag, &s.blocks.at(index_of_min), &s, true,
-                  c->wrThrough, block_size);
-    // remove the old mapping since it got replaced
+                  c->wrThrough, block_size, c);
+
+    // Remove the old tag-to-index mapping as it has been replaced
     s.index.erase(tmp);
-    return;
   }
 }
 
 void replace_block(uint32_t index, uint32_t tag, Block *b, Set *s, bool is_load,
-                   bool w_through, uint32_t size) {
+                   bool w_through, uint32_t size, Cache *c) {
   // if old block is dirty first we need to update the memory
-  if (b->is_dirty) {
-    b->is_dirty = false;
-    total_cycles += size / 4 * 100;
+  if (b->isDirty) {
+    b->isDirty = false;
+    c->totalCycles += size / 4 * 100;
   }
   if (!is_load) {
     // set if the block is dirty or not depending on whether cache is write
     // through or not
-    b->is_dirty = !w_through;
-    save_misses++;
-    total_cycles += ((size) / 4 * 100) + 1;
+    b->isDirty = !w_through;
+    c->saveMisses++;
+    c->totalCycles += ((size) / 4 * 100) + 1;
   }
   if (is_load) {
-    loadMisses++;
-    total_cycles += size / 4 * 100;
+    c->loadMisses++;
+    c->totalCycles += size / 4 * 100;
   }
   // update the new block to hold the values from the new block
-  b->timeStamp = counter++;
+  b->timeStamp = c->counter++;
   // update the map so new tag points to this index
   s->index.insert(std::pair<uint32_t, uint32_t>(tag, index));
   b->tag = tag;
@@ -77,59 +93,81 @@ void replace_block(uint32_t index, uint32_t tag, Block *b, Set *s, bool is_load,
 }
 
 void operateS(Cache *c, uint32_t setIndex, uint32_t tag, uint32_t block_size) {
+  // Access the set within the cache using the set index
   Set &s = c->sets.at(setIndex);
+
+  // Attempt to find the block with the given tag in the set
   auto i = s.index.find(tag);
+
+  // If a block with the tag exists (store hit)
   if (i != s.index.end()) {
+    // Retrieve the index of the block within the set
     uint32_t index_of_slot = i->second;
-    // if fifo update for a hit
-    if (!c->Fifo)
-      s.blocks.at(index_of_slot).timeStamp = counter++;
-    // if write through update the cycle count or tag as dirty d
-    if (c->wrThrough) {
-      total_cycles += 101;
-    } else {
-      s.blocks.at(index_of_slot).is_dirty = true;
+
+    // If not using FIFO (e.g., LRU), update the block's timestamp
+    if (!c->Fifo) {
+      s.blocks.at(index_of_slot).timeStamp = c->counter++;
     }
-    save_hits++;
+
+    // Handling write policy
+    if (c->wrThrough) {
+      // For write-through, immediately increment total cycles for memory write
+      c->totalCycles += 101;
+    } else {
+      // Mark the block as dirty for write-back
+      s.blocks.at(index_of_slot).isDirty = true;
+    }
+    // Increment store hit count
+    c->saveHits++;
   } else if (c->wrAlloc) {
-    uint32_t index_of_min = 0;
-    uint32_t min_val = 0xffffffff;
-    // loop through, if there is an invalid block found update that, and if not
-    // replace the block with the lowest ts
+    // For write-allocate, find a block to replace
+    uint32_t index_of_min = 0, min_val = UINT32_MAX;
+
+    // Search for either an invalid or the least recently used block
     for (uint32_t i = 0; i < s.blocks.size(); i++) {
-      if (s.blocks.at(i).valid) {
-        if (min_val > s.blocks.at(i).timeStamp) {
-          min_val = s.blocks.at(i).timeStamp;
-          index_of_min = i;
-        }
-      } else {
-        // invalid block found, update the invalid block
+      if (s.blocks.at(i).valid && min_val > s.blocks.at(i).timeStamp) {
+        min_val = s.blocks.at(i).timeStamp;
+        index_of_min = i;
+      } else if (!s.blocks.at(i).valid) {
+        // If an invalid block is found, replace it directly
         replace_block(i, tag, &s.blocks.at(i), &s, false, c->wrThrough,
-                      block_size);
+                      block_size, c);
         return;
       }
     }
-    // no invalid block, update the block w min time stamp
+
+    // Replace the least recently used or first invalid block found
     uint32_t tmp = s.blocks.at(index_of_min).tag;
     s.index.erase(tmp);
     replace_block(index_of_min, tag, &s.blocks.at(index_of_min), &s, false,
-                  c->wrThrough, block_size);
-    return;
+                  c->wrThrough, block_size, c);
   } else {
-    // since its not write allocate we only update the cycle count
-    save_misses++;
-    total_cycles += 101;
-    counter++;
+    // For no-write-allocate, simply update cycle count for memory write
+    c->saveMisses++;
+    c->totalCycles += 101;
   }
+  // Increment operation counter
+  c->counter++;
 }
 
-void totalL() {
-  std::cout << "Total loads: " << loadHits + loadMisses << "\n";
-  std::cout << "Total stores: " << save_hits + save_misses << "\n";
-  std::cout << "Load hits: " << loadHits << "\n";
-  std::cout << "Load misses: " << loadMisses << "\n";
-  std::cout << "Store hits: " << save_hits << "\n";
-  std::cout << "Store misses: " << save_misses << "\n";
-  std::cout << "Total Cycles: " << total_cycles + save_hits + loadHits
-            << std::endl;
+uint32_t getCacheCounter(const Cache &cache) { return cache.counter; }
+uint32_t getCacheLoadMisses(const Cache &cache) { return cache.loadMisses; }
+uint32_t getCacheLoadHits(const Cache &cache) { return cache.loadHits; }
+uint32_t getCacheSaveHits(const Cache &cache) { return cache.saveHits; }
+uint32_t getCacheSaveMisses(const Cache &cache) { return cache.saveMisses; }
+uint32_t getCacheMultipliedCycles(const Cache &cache) {
+  return cache.multipliedCycles;
+}
+uint32_t getCacheTotalCycles(const Cache &cache) { return cache.totalCycles; }
+
+void totalL(const Cache &cache) {
+  cout << "Total loads: " << getCacheLoadHits(cache) + getCacheLoadMisses(cache)
+       << "\n";
+  cout << "Total stores: "
+       << getCacheSaveHits(cache) + getCacheSaveMisses(cache) << "\n";
+  cout << "Load hits: " << getCacheLoadHits(cache) << "\n";
+  cout << "Load misses: " << getCacheLoadMisses(cache) << "\n";
+  cout << "Store hits: " << getCacheSaveHits(cache) << "\n";
+  cout << "Store misses: " << getCacheSaveMisses(cache) << "\n";
+  cout << "Total Cycles: " << getCacheTotalCycles(cache) << endl;
 }

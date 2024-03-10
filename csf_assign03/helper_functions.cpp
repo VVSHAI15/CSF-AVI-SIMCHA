@@ -27,8 +27,8 @@ int checkArgValidity(int argc, char *argv[], bool *wAlloc, bool *wThrough,
     return 1;
   }
   // check if relevent args are power of two
-  if (!isPowerOfTwo(stoul(argv[1])) || !isPowerOfTwo(stoul(argv[2])) ||
-      !isPowerOfTwo(stoul(argv[3])) || !(stoul(argv[3]) >= 4)) {
+  if (!isPowerOfTwo(stol(argv[1])) || !isPowerOfTwo(stol(argv[2])) ||
+      !isPowerOfTwo(stol(argv[3])) || !(stol(argv[3]) >= 4)) {
     cerr << "A relevent arg isn't a power of two" << endl;
     return 1;
   }
