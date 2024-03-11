@@ -59,8 +59,8 @@ void operateL(Cache *c, uint32_t setIndex, uint32_t tag, uint32_t block_size);
 // is_load - true if the operation is a load
 // w_through - true if the cache is write through
 // block_size - size of the block
-void replace_block(uint32_t index, uint32_t tag, Block *b, Set *s, bool is_load,
-                   bool w_through, uint32_t block_size, Cache *c);
+void replaceBlock(uint32_t index, uint32_t tag, Block *b, Set *s, bool is_load,
+                  bool w_through, uint32_t block_size, Cache *c);
 
 uint32_t getCacheCounter(const Cache &cache);
 uint32_t getCacheLoadMisses(const Cache &cache);
@@ -73,6 +73,6 @@ uint32_t getCacheTotalCycles(const Cache &cache);
 // prints out the misses, hits and total loads
 // Parameters:
 // block_size - block size of the cache
-void totalL(const Cache &cache);
+void printResults(const Cache &cache);
 
 #endif
