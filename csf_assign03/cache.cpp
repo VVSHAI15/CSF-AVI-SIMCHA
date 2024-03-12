@@ -5,9 +5,9 @@
 using namespace std;
 
 // Constructor
-Cache::Cache(bool writeAllocate, bool writeThrough, bool isFifo,
+Cache::Cache(bool writeAllocate, bool writeThrough, bool isLRU,
              uint32_t setsCount, uint32_t blocksPerSet)
-    : writeAllocate(writeAllocate), writeThrough(writeThrough), isFifo(isFifo),
+    : writeAllocate(writeAllocate), writeThrough(writeThrough), isLRU(isLRU),
       setsCount(setsCount), blocksPerSet(blocksPerSet), loadHits(0),
       loadMisses(0), saveHits(0), saveMisses(0), totalCycles(0), counter(0) {
   sets.resize(setsCount);
@@ -22,7 +22,7 @@ void Cache::load(uint32_t setIndex, uint32_t tag, uint32_t blockSize) {
   auto blockIter = set.index.find(tag);
 
   if (blockIter != set.index.end()) { // Cache hit
-    if (!isFifo) {
+    if (isLRU) {                      // Update timestamp only for LRU policy
       set.blocks[blockIter->second].timeStamp = counter++;
     }
     loadHits++;
@@ -37,7 +37,7 @@ void Cache::store(uint32_t setIndex, uint32_t tag, uint32_t blockSize) {
   auto blockIter = set.index.find(tag);
 
   if (blockIter != set.index.end()) { // Store hit
-    if (!isFifo) {
+    if (isLRU) {                      // Update timestamp only for LRU policy
       set.blocks[blockIter->second].timeStamp = counter++;
     }
     if (writeThrough) {
@@ -58,17 +58,18 @@ void Cache::store(uint32_t setIndex, uint32_t tag, uint32_t blockSize) {
 // Handle cache miss
 void Cache::handleMiss(Set &set, uint32_t tag, uint32_t blockSize,
                        bool isLoad) {
-  uint32_t minIndex = 0, minValue = numeric_limits<uint32_t>::max();
+  uint32_t minIndex = 0, minValue = std::numeric_limits<uint32_t>::max();
   bool foundInvalid = false;
+  uint32_t index = 0; // Used to track the current index within the loop
 
-  for (uint32_t i = 0; i < set.blocks.size(); ++i) {
-    if (!set.blocks[i].valid) {
-      replaceBlock(set, i, tag, blockSize, isLoad);
+  for (auto it = set.blocks.begin(); it != set.blocks.end(); ++it, ++index) {
+    if (!it->valid) {
+      replaceBlock(set, index, tag, blockSize, isLoad);
       foundInvalid = true;
       break;
-    } else if (set.blocks[i].timeStamp < minValue) {
-      minValue = set.blocks[i].timeStamp;
-      minIndex = i;
+    } else if (it->timeStamp < minValue) {
+      minValue = it->timeStamp;
+      minIndex = index;
     }
   }
 

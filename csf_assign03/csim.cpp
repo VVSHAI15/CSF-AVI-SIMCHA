@@ -21,7 +21,7 @@ bool isInt(const string &str) {
 }
 
 int checkArgValidity(int argc, char *argv[], bool *wAlloc, bool *wThrough,
-                     bool *isFifo) {
+                     bool *isLRU) {
   // invalid # of args in command line
   if (argc != 7) {
     cerr << "Invalid number of args, should be 7" << endl;
@@ -55,9 +55,9 @@ int checkArgValidity(int argc, char *argv[], bool *wAlloc, bool *wThrough,
     return 1;
   }
 
-  if (strcmp(argv[6], "fifo") == 0) {
-    *isFifo = true;
-  } else if (strcmp(argv[6], "lru") != 0) {
+  if (strcmp(argv[6], "lru") == 0) {
+    *isLRU = true;
+  } else if (strcmp(argv[6], "fifo") != 0) {
     cerr << "Invalid fifth argument" << endl;
     return 1;
   }
@@ -82,8 +82,8 @@ int logBase2(uint32_t value) {
 int main(int argc, char *argv[]) {
   // Handle Cache configuration
   bool wrAlloc = false, wrThrough = false;
-  bool Fifo = false; // If false, eviction policy if LFU
-  int isInvalid = checkArgValidity(argc, argv, &wrAlloc, &wrThrough, &Fifo);
+  bool isLRU = false; // If false, eviction policy if FIFO
+  int isInvalid = checkArgValidity(argc, argv, &wrAlloc, &wrThrough, &isLRU);
   if (isInvalid != 0) {
     return isInvalid;
   }
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
   int logSets = logBase2(numSets);
   int logBlockSize = logBase2(blockSize);
 
-  Cache c = Cache(wrAlloc, wrThrough, Fifo, numSets, numBlocks);
+  Cache c = Cache(wrAlloc, wrThrough, isLRU, numSets, numBlocks);
 
   string trace;
 
