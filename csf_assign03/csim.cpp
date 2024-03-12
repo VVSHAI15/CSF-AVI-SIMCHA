@@ -82,7 +82,7 @@ int logBase2(uint32_t value) {
 int main(int argc, char *argv[]) {
   // Handle Cache configuration
   bool wrAlloc = false, wrThrough = false;
-  bool Fifo = false;
+  bool Fifo = false; // If false, eviction policy if LFU
   int isInvalid = checkArgValidity(argc, argv, &wrAlloc, &wrThrough, &Fifo);
   if (isInvalid != 0) {
     return isInvalid;
@@ -96,10 +96,6 @@ int main(int argc, char *argv[]) {
   int logSets = logBase2(numSets);
   int logBlockSize = logBase2(blockSize);
 
-  std::vector<Block> blocks(numBlocks);
-  std::map<uint32_t, uint32_t> m;
-  Set s = {blocks, m};
-  vector<Set> sets(numSets, s);
   Cache c = Cache(wrAlloc, wrThrough, Fifo, numSets, numBlocks);
 
   string trace;
@@ -116,17 +112,15 @@ int main(int argc, char *argv[]) {
     if (logSets == 0)
       setIndex = 0;
     // operate load or save accordingly
-    // cout << "xinan isnt cute" << endl;
-    // cout << trace << endl;
 
     if (trace[0] == 's') {
-      operateS(&c, setIndex, tag, blockSize);
+      c.store(setIndex, tag, blockSize);
 
     } else {
-      operateL(&c, setIndex, tag, blockSize);
+      c.load(setIndex, tag, blockSize);
     }
   }
 
-  printResults(c);
+  c.printResults();
   return 0;
 }
