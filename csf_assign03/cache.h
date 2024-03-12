@@ -22,7 +22,7 @@ struct Set {
 class Cache {
 public:
   // Constructor
-  Cache(bool writeAllocate, bool writeThrough, bool isFifo, uint32_t setsCount,
+  Cache(bool writeAllocate, bool writeThrough, bool isLRU, uint32_t setsCount,
         uint32_t blocksPerSet);
 
   // Load data from cache
@@ -37,7 +37,7 @@ public:
 private:
   bool writeAllocate;
   bool writeThrough;
-  bool isFifo;
+  bool isLRU;
   uint32_t setsCount;
   uint32_t blocksPerSet;
   uint32_t loadHits;
