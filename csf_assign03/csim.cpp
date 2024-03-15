@@ -16,31 +16,32 @@ bool isPowerOfTwo(int k) {
   return n;
 }
 
+// Check if a string consists of only digits
 bool isInt(const string &str) {
   return all_of(str.begin(), str.end(), ::isdigit);
 }
 
+// Checks the validity of the arguments from the command line
 int checkArgValidity(int argc, char *argv[], bool *wAlloc, bool *wThrough,
                      bool *isLRU) {
-  // invalid # of args in command line
+  // Invalid # of args in command line
   if (argc != 7) {
     cerr << "Invalid number of args, should be 7" << endl;
     return 1;
   }
-  // check if relevent arguements are integers
+  // Check if relevent arguements are integers
   if (!isInt(argv[1]) || !isInt(argv[2]) || !isInt(argv[3])) {
     cerr << "A relevent arg isn't of type integer" << endl;
     return 1;
   }
-  // check if relevent args are power of two
+  // Check if relevent args are power of two
   if (!isPowerOfTwo(stol(argv[1])) || !isPowerOfTwo(stol(argv[2])) ||
       !isPowerOfTwo(stol(argv[3])) || !(stol(argv[3]) >= 4)) {
     cerr << "A relevent arg isn't a power of two" << endl;
     return 1;
   }
-
-  // check strings for Cache configurations and reset flags if needed
-
+  
+  // Check strings for Cache configurations and reset flags if needed
   if (strcmp(argv[4], "write-allocate") == 0) {
     *wAlloc = true;
   } else if (strcmp(argv[4], "no-write-allocate") != 0) {
@@ -71,6 +72,7 @@ int checkArgValidity(int argc, char *argv[], bool *wAlloc, bool *wThrough,
 }
 
 // used http://www.graphics.stanford.edu/~seander/bithacks.html
+// Calculate the base-2 logarithm of a given value.
 int logBase2(uint32_t value) {
   uint32_t result = 0;
   while (value >>= 1) { // Shift right until value becomes 0
@@ -101,17 +103,16 @@ int main(int argc, char *argv[]) {
   string trace;
 
   while (getline(cin, trace)) {
-
-    // read the line and get the values
+    // Read the line and get the values
     uint32_t addr = stol(trace.substr(2, 10), 0, 16);
-    // get the tag and the index using bitwise operations
+    // Get the tag and the index using bitwise operations
     uint32_t tag = addr >> (logBlockSize + logSets);
     uint32_t setIndex = addr << (32 - (logBlockSize + logSets));
     setIndex = setIndex >> (32 - logSets);
 
     if (logSets == 0)
       setIndex = 0;
-    // operate load or save accordingly
+    // Operate load or save accordingly
 
     if (trace[0] == 's') {
       c.store(setIndex, tag, blockSize);
