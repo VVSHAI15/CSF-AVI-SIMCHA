@@ -1,0 +1,8 @@
+/*.o
+/depend.mak
+/unit_tests
+/server
+/get_value
+/set_value
+/incr_value
+/solution.zip
