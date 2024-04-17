@@ -27,7 +27,10 @@ Message::~Message()
 
 Message &Message::operator=( const Message &rhs )
 {
-  // TODO: implement
+  if (this != &rhs) {
+    m_message_type = rhs.m_message_type;
+    m_args = rhs.m_args;
+  }
   return *this;
 }
 
@@ -43,31 +46,41 @@ void Message::set_message_type(MessageType message_type)
 
 std::string Message::get_username() const
 {
-  // TODO: implement
+  if (m_args.size() > 0) {
+    return m_args[0];
+  }
   return "";
 }
 
 std::string Message::get_table() const
 {
-  // TODO: implement
+  if (m_args.size() > 0) {
+    return m_args[0];
+  }
   return "";
 }
 
 std::string Message::get_key() const
 {
-  // TODO: implement
+  if (m_args.size() > 1) {
+    return m_args[1];
+  }
   return "";
 }
 
 std::string Message::get_value() const
 {
-  // TODO: implement
+  if (m_args.size() > 0) {
+    return m_args[0];
+  }
   return "";
 }
 
 std::string Message::get_quoted_text() const
 {
-  // TODO: implement
+  if (m_args.size() > 0) {
+    return m_args[0];
+  }
   return "";
 }
 
