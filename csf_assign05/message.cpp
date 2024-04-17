@@ -3,6 +3,8 @@
 #include <regex>
 #include <cassert>
 #include "message.h"
+#include "message_serialization.h"  
+
 
 Message::Message()
   : m_message_type(MessageType::NONE)
@@ -91,6 +93,5 @@ void Message::push_arg( const std::string &arg )
 
 bool Message::is_valid() const
 {
-  // TODO: implement
   return true;
 }
