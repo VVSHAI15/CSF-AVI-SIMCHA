@@ -58,6 +58,10 @@ public:
 
   void push_arg( const std::string &arg );
 
+  bool is_quoted_text(const std::string& arg);
+
+  std::string message_type_to_string(MessageType type);
+
   bool is_valid() const;
 
   unsigned get_num_args() const { return m_args.size(); }

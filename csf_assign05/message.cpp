@@ -91,7 +91,61 @@ void Message::push_arg( const std::string &arg )
   m_args.push_back( arg );
 }
 
+bool Message::is_quoted_text(const std::string& arg)
+{
+    return !arg.empty() && arg.front() == '"' && arg.back() == '"';
+}
+
+std::string Message::message_type_to_string(MessageType type)
+{
+    switch(type)
+    {
+        case MessageType::NONE:
+            return "NONE";
+        case MessageType::LOGIN:
+            return "LOGIN";
+        case MessageType::CREATE:
+            return "CREATE";
+        case MessageType::PUSH:
+            return "PUSH";
+        case MessageType::POP:
+            return "POP";
+        case MessageType::TOP:
+            return "TOP";
+        case MessageType::SET:
+            return "SET";
+        case MessageType::GET:
+            return "GET";
+        case MessageType::ADD:
+            return "ADD";
+        case MessageType::SUB:
+            return "SUB";
+        case MessageType::DIV:
+            return "DIV";
+        case MessageType::BEGIN:
+            return "BEGIN";
+        case MessageType::COMMIT:
+            return "COMMIT";
+        case MessageType::BYE:
+            return "BYE";
+        case MessageType::OK:
+            return "OK";
+        case MessageType::FAILED:
+            return "FAILED";
+        case MessageType::ERROR:
+            return "ERROR";
+        case MessageType::DATA:
+            return "Data";
+
+        
+        default:
+            return "";
+    }
+}
+
+
 bool Message::is_valid() const
 {
+  //TODO
   return true;
 }
