@@ -46,6 +46,7 @@ void Message::set_message_type(MessageType message_type)
   m_message_type = message_type;
 }
 
+
 std::string Message::get_username() const
 {
   if (m_args.size() > 0) {
@@ -142,6 +143,8 @@ std::string Message::message_type_to_string(MessageType type)
             return "";
     }
 }
+
+
 
 
 bool Message::is_valid() const

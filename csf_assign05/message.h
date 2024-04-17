@@ -58,9 +58,9 @@ public:
 
   void push_arg( const std::string &arg );
 
-  bool is_quoted_text(const std::string& arg);
+  static bool is_quoted_text(const std::string& arg);
 
-  std::string message_type_to_string(MessageType type);
+  static std::string message_type_to_string(MessageType type);
 
   bool is_valid() const;
 

@@ -11,12 +11,13 @@ void MessageSerialization::encode(const Message &msg, std::string &encoded_msg)
     encoded_msg.clear();
 
     // Encode the command
-    encoded_msg += message_type_to_string(msg.get_message_type()) + " ";
+    encoded_msg += Message::message_type_to_string(msg.get_message_type()) + " ";
 
     // Encode the arguments
-    for(const auto& arg : msg.get_args())
+    for(unsigned i = 0; i < msg.get_num_args(); ++i)
     {
-        if(is_quoted_text(arg)) // Check if it's a quoted text
+        const auto& arg = msg.get_arg(i);
+        if(Message::is_quoted_text(arg)) // Check if it's a quoted text
         {
             encoded_msg += "\"" + arg + "\" ";
         }
