@@ -11,34 +11,59 @@ void MessageSerialization::encode(const Message &msg, std::string &encoded_msg)
     encoded_msg.clear();
 
     // Encode the command
-    encoded_msg += Message::message_type_to_string(msg.get_message_type()) + " ";
-
-    // Encode the arguments
-    for(unsigned i = 0; i < msg.get_num_args(); ++i)
-    {
-        const auto& arg = msg.get_arg(i);
-        if(Message::is_quoted_text(arg)) // Check if it's a quoted text
-        {
-            encoded_msg += "\"" + arg + "\" ";
-        }
-        else // It's a regular identifier or value
-        {
-            encoded_msg += arg + " ";
-        }
+    std::stringstream ss;
+    ss << msg.message_type_to_string(msg.get_message_type());
+    if(msg.is_quoted_text(msg.get_quoted_text())) {
+      ss << " ";
+      ss << "\"" << msg.get_quoted_text() << "\" ";
+    } else if(msg.get_num_args() != 0) {
+      ss << " ";
+      ss << msg.get_arg(0); 
     }
 
-    // Remove the trailing space
-    if(!encoded_msg.empty())
-    {
-        encoded_msg.pop_back();
+    //additional args
+    if (msg.get_message_type() == MessageType::SET || msg.get_message_type() == MessageType::GET) {
+      ss << " " << msg.get_arg(1);
     }
+    //Newline char
+    ss << "\n";
 
-    // Add newline character at the end
-    encoded_msg += "\n";
+    encoded_msg = ss.str();
+
+
+  
+
+    if(encoded_msg.length() > Message::MAX_ENCODED_LEN)
+    {
+        throw InvalidMessage("Encoded message is too long");
+    }
 }
+
 
 
 void MessageSerialization::decode( const std::string &encoded_msg_, Message &msg )
 {
-  // TODO: implement
+
+    // Remove the trailing space
+   /* if(!encoded_msg.empty())
+    {
+        encoded_msg.pop_back();
+    }*/
+   encoded_msg.clear();
+
+   if(encoded_msg.length() > Message::MAX_ENCODED_LEN)
+    {
+        throw InvalidMessage("Encoded message is too long");
+    }
+
+    if(encoded_msg_.empty()||encoded_msg.back != '\n')
+    {
+        throw InvalidMessage("Encoded message is empty");
+    }
+
+    //TODO YOU NEED TO LOOK AT THE UNIT TESTS TO BE ABLE TO GET THIS!!! CHECK HOW THE DECODE WORKS
+    if(!msg.is_valid())
+    {
+        throw InvalidMessage("Decoded message is invalid");
+    }
 }

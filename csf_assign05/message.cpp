@@ -139,7 +139,7 @@ std::string Message::message_type_to_string(MessageType type)
         case MessageType::ERROR:
             return "ERROR";
         case MessageType::DATA:
-            return "Data";
+            return "DATA";
 
         
         default:
@@ -199,52 +199,69 @@ bool Message::no_args() const
     return get_num_args() == 0;
 }
 
+bool Message::checkIdentifier(const std::string& arg) const
+{
+    char first_char = arg[0];
+    if(!std::isalpha(first_char)) {
+        return false;
+    }
+    
+    int char_length = arg.size();
+    for(int i = 1; i < char_length; i++) {
+        if(!std::isalnum(arg[i]) && arg[i] != '_') {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Message::checkValue(const std::string& arg) const
+{
+    int char_length = arg.size();
+    for(int i = 0; i < char_length; i++) {
+        if(std::isspace(arg[i])) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool Message::is_valid() const
 {
-    switch (get_message_type()) 
-    { 
+   switch (get_message_type()) {
         case MessageType::NONE:
-            return "NONE";
-        case MessageType::LOGIN:
-            return "LOGIN";
-        case MessageType::CREATE:
-            return "CREATE";
-        case MessageType::PUSH:
-            return "PUSH";
-        case MessageType::POP:
-            return "POP";
-        case MessageType::TOP:
-            return "TOP";
-        case MessageType::SET:
-            return "SET";
-        case MessageType::GET:
-            return "GET";
-        case MessageType::ADD:
-            return "ADD";
-        case MessageType::SUB:
-            return "SUB";
-        case MessageType::DIV:
-            return "DIV";
-        case MessageType::BEGIN:
-            return "BEGIN";
-        case MessageType::COMMIT:
-            return "COMMIT";
-        case MessageType::BYE:
-            return "BYE";
-        case MessageType::OK:
-            return "OK";
-        case MessageType::FAILED:
-            return "FAILED";
-        case MessageType::ERROR:
-            return "ERROR";
-        case MessageType::DATA:
-            return "Data";
+            return no_args();
 
-        
-        default:
-            return "";
-       
+        case MessageType::LOGIN: 
+        case MessageType::CREATE: 
+            return m_args.size() == 1 && checkIdentifier(m_args.at(0));
+
+        case MessageType::SET: 
+        case MessageType::GET: 
+            return m_args.size() == 2 && checkIdentifier(m_args.at(0)) && checkIdentifier(m_args.at(1));
+
+        case MessageType::PUSH: 
+        case MessageType::DATA: 
+            return m_args.size() == 1 && checkValue(m_args.at(0));
+
+        case MessageType::POP:
+        case MessageType::TOP:
+        case MessageType::ADD:
+        case MessageType::SUB:
+        case MessageType::MUL:
+        case MessageType::DIV:
+        case MessageType::BEGIN:
+        case MessageType::COMMIT:
+        case MessageType::BYE:
+        case MessageType::OK:
+            return no_args();
+
+        case MessageType::FAILED: 
+        case MessageType::ERROR: 
+            return m_args.size() == 1;
+
+        default: 
+            return false;
     }
 }
 
