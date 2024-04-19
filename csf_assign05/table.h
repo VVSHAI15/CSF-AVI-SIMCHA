@@ -8,7 +8,9 @@
 class Table {
 private:
   std::string m_name;
-  // TODO: add member variables
+  std::map<std::string, std::string> data;
+  pthread_mutex_t mutex;
+  std::map<std::string, std::string> staged_data;  // Temporary storage for proposed changes.
 
   // copy constructor and assignment operator are prohibited
   Table( const Table & );
@@ -26,11 +28,14 @@ public:
 
   // Note: these functions should only be called while the
   // table's lock is held!
-  void set( const std::string &key, const std::string &value );
-  bool has_key( const std::string &key );
-  std::string get( const std::string &key );
+  void set(const std::string& key, const std::string& value, bool stage = true);
+  std::string get(const std::string& key, bool checkStaged = true);
+  bool has_key(const std::string& key, bool checkStaged = true);
   void commit_changes();
   void rollback_changes();
 };
 
 #endif // TABLE_H
+
+
+

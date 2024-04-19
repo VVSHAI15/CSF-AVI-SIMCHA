@@ -39,31 +39,45 @@ void MessageSerialization::encode(const Message &msg, std::string &encoded_msg)
     }
 }
 
-
-
-void MessageSerialization::decode( const std::string &encoded_msg_, Message &msg )
-{
-
-    // Remove the trailing space
-   /* if(!encoded_msg.empty())
-    {
-        encoded_msg.pop_back();
-    }*/
-   encoded_msg.clear();
-
-   if(encoded_msg.length() > Message::MAX_ENCODED_LEN)
-    {
-        throw InvalidMessage("Encoded message is too long");
+void MessageSerialization::decode(const std::string &encoded_msg, Message &msg) {
+    // Check for maximum length violation
+    if (encoded_msg.length() > Message::MAX_ENCODED_LEN) {
+        throw InvalidMessage("Encoded message exceeds maximum length.");
     }
 
-    if(encoded_msg_.empty()||encoded_msg.back != '\n')
-    {
-        throw InvalidMessage("Encoded message is empty");
+    // Ensure the message ends with a newline character
+    if (encoded_msg.empty() || encoded_msg.back() != '\n') {
+        throw InvalidMessage("Encoded message must end with a newline character.");
     }
 
-    //TODO YOU NEED TO LOOK AT THE UNIT TESTS TO BE ABLE TO GET THIS!!! CHECK HOW THE DECODE WORKS
-    if(!msg.is_valid())
-    {
-        throw InvalidMessage("Decoded message is invalid");
+    // Remove the newline character for parsing
+    std::string trimmed_msg = encoded_msg.substr(0, encoded_msg.length() - 1);
+
+    // Use a stringstream to parse the message components
+    std::istringstream iss(trimmed_msg);
+    std::string typeStr;
+    
+    // Extract the message type
+    if (!(iss >> typeStr)) {
+        throw InvalidMessage("Encoded message is empty or incorrectly formatted.");
+    }
+
+    MessageType type = Message::string_to_message_type(typeStr);
+    msg.set_message_type(type);  // Set the message type
+
+    // Extract remaining arguments, assuming they're not necessarily quoted
+    std::string arg;
+    while (iss >> arg) {
+        if (Message::is_quoted_text(arg)) {
+            // Remove leading and trailing quotes
+            arg.erase(0, 1);  // Remove the first character (")
+            arg.erase(arg.size() - 1, 1);  // Remove the last character (")
+        }
+        msg.push_arg(arg);
+    }
+
+    // Validate the decoded message
+    if (!msg.is_valid()) {
+        throw InvalidMessage("Decoded message is invalid.");
     }
 }

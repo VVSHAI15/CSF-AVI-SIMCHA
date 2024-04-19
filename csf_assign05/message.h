@@ -61,7 +61,7 @@ public:
   static bool is_quoted_text(const std::string& arg);
 
   static std::string message_type_to_string(MessageType type);
-  MessageType string_to_message_type(const std::string& typeStr);
+  static MessageType string_to_message_type(const std::string& typeStr);
 
   bool no_args() const;
   bool checkIdentifier(const std::string& arg) const;
