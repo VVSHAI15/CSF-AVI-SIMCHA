@@ -45,6 +45,8 @@ public:
   Message( const Message &other );
   ~Message();
 
+  const std::vector<std::string>& get_args() const { return m_args; }
+  void clear_args() { m_args.clear(); }
   Message &operator=( const Message &rhs );
 
   MessageType get_message_type() const;
