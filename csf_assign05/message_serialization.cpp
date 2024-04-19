@@ -71,6 +71,6 @@ void MessageSerialization::decode(const std::string& encoded_msg, Message& msg) 
     }
 
     if (!msg.is_valid()) {
-        throw InvalidMessage("Decoded message does not conform to protocol specifications.");
+        throw InvalidMessage("Decoded message is not valid.");
     }
 }
