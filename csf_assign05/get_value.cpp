@@ -12,7 +12,7 @@ void send_message(int fd, const std::string& msg) {
 
 // Function to read a response from the server
 std::string read_response(int fd, rio_t& rio) {
-  char buf[MAXLINE];
+  char buf[MAXLINE];  
   if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
     std::cerr << "Error: Failed to read server response\n";
     exit(1);
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   }
 
   std::string hostname = argv[1];
-  std::string port = argv[2]; 
+  std::string port = argv[2]; // Port must be a string
   std::string username = argv[3];
   std::string table = argv[4];
   std::string key = argv[5];
