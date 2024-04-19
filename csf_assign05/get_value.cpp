@@ -14,4 +14,36 @@ int main(int argc, char **argv)
   std::string key = argv[5];
 
   // TODO: implement
+
+/*
+  open the client connection
+check for errors
+
+  intialize rio_t object
+  intialize a buffer
+  intialize another buffer (one for request and one for response)
+  
+  LOGIN command
+  check for errors
+  send response
+
+  GET command
+  check for errors
+  send response
+
+  TOP command
+  check for errors
+  send response
+
+  GET command
+  check for errors
+  send response
+  
+  Print the value
+
+  BYE command
+  check for errors
+  send response
+
+that's the basic structure*/
 }
