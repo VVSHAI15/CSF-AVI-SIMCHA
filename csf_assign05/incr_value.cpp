@@ -3,113 +3,109 @@
 #include <iostream>
 #include <cstring>
 
-std::string extractQuotedText(const std::string& response) {
-    std::size_t first = response.find('"');
-    std::size_t last = response.rfind('"');
-    if (first == std::string::npos || last == std::string::npos || first == last) {
-        throw InvalidMessage("Response does not contain properly quoted text.");
+std::string extractValueBetweenQuotes(const std::string &input) {
+    size_t start = input.find('"');
+    if (start == std::string::npos) {
+        return "";
     }
-    return response.substr(first + 1, last - first - 1);
+    size_t end = input.find('"', start + 1);
+    if (end == std::string::npos) {
+        return "";
+    }
+    return input.substr(start + 1, end - start - 1);
 }
 
-void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.length()) != static_cast<ssize_t>(msg.length())) {
-        throw CommException("Failed to send message to server.");
+void send_message(int fd, const std::string &msg) {
+    if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
+        throw CommException("Failed to send message");
     }
 }
 
-std::string read_response(int fd, rio_t& rio) {
+std::string read_response(int fd, rio_t &rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        throw CommException("Failed to read response from server.");
+    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+        throw CommException("Failed to read response from server");
     }
     std::string response(buf);
-    if (response.empty() or response.back() != '\n') {
-        throw InvalidMessage("Server response not properly terminated.");
+    if (response.empty() || response.back() != '\n') {
+        throw InvalidMessage("Server response not properly terminated");
     }
-    return response.substr(0, response.length() - 1); // Strip the newline
+    return response.substr(0, response.size() - 1);
 }
 
 int main(int argc, char **argv) {
-    bool use_transaction = argc == 7 && std::string(argv[1]) == "-t";
-    int idx = use_transaction ? 2 : 1;
-    
-    if (argc != 6 + use_transaction) {
+    if (argc != 6 && (argc != 7 || std::string(argv[1]) != "-t")) {
         std::cerr << "Usage: ./incr_value [-t] <hostname> <port> <username> <table> <key>\n";
         return 1;
     }
 
+    bool use_transaction = (argc == 7);
+    int idx = use_transaction ? 2 : 1;
     std::string hostname = argv[idx++], port = argv[idx++], username = argv[idx++],
                 table = argv[idx++], key = argv[idx++];
-    int clientfd = -1;
-    
+    int clientfd;
+
     try {
         clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
-            throw CommException("Could not connect to server.");
+            throw CommException("Could not connect to server");
         }
 
         rio_t rio;
         rio_readinitb(&rio, clientfd);
 
         send_message(clientfd, "LOGIN " + username + "\n");
-        std::string response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw InvalidMessage("Login failed: " + extractQuotedText(response));
+        if (read_response(clientfd, rio) != "OK") {
+            std::string error_message = extractValueBetweenQuotes(read_response(clientfd, rio));
+            throw InvalidMessage(error_message.empty() ? "Login failed" : error_message);
         }
 
         if (use_transaction) {
             send_message(clientfd, "BEGIN\n");
-            response = read_response(clientfd, rio);
-            if (response != "OK") {
-                throw OperationException("Transaction begin failed: " + extractQuotedText(response));
+            if (read_response(clientfd, rio) != "OK") {
+                throw OperationException("Transaction begin failed");
             }
         }
 
         send_message(clientfd, "GET " + table + " " + key + "\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw InvalidMessage("GET operation failed: " + extractQuotedText(response));
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("GET operation failed");
         }
 
         send_message(clientfd, "PUSH 1\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("PUSH operation failed: " + extractQuotedText(response));
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("PUSH operation failed");
         }
 
         send_message(clientfd, "ADD\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("ADD operation failed: " + extractQuotedText(response));
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("ADD operation failed");
         }
 
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("SET operation failed: " + extractQuotedText(response));
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("SET operation failed");
         }
 
         if (use_transaction) {
             send_message(clientfd, "COMMIT\n");
-            response = read_response(clientfd, rio);
-            if (response != "OK") {
-                throw OperationException("Transaction commit failed: " + extractQuotedText(response));
+            if (read_response(clientfd, rio) != "OK") {
+                throw OperationException("Transaction commit failed");
             }
         }
 
         send_message(clientfd, "BYE\n");
         close(clientfd);
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         if (clientfd >= 0) {
             try {
                 send_message(clientfd, "BYE\n");
+                close(clientfd);
             } catch (...) {
-                // Ignore errors in emergency cleanup
+                // Ignore cleanup errors
             }
-            close(clientfd);
         }
         return 2;
     }
