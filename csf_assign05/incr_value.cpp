@@ -3,15 +3,18 @@
 #include <iostream>
 #include <cstring>
 
+// Extracts the value between the first pair of quotes in the input string.
 std::string extractValueBetweenQuotes(const std::string &input) {
     size_t start = input.find('"');
     if (start == std::string::npos) {
-        return "";
+        return ""; // No opening quote found
     }
+
     size_t end = input.find('"', start + 1);
     if (end == std::string::npos) {
-        return "";
+        return ""; // No closing quote found
     }
+
     return input.substr(start + 1, end - start - 1);
 }
 
@@ -55,42 +58,48 @@ int main(int argc, char **argv) {
         rio_readinitb(&rio, clientfd);
 
         send_message(clientfd, "LOGIN " + username + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            std::string error_message = extractValueBetweenQuotes(read_response(clientfd, rio));
-            throw InvalidMessage(error_message.empty() ? "Login failed" : error_message);
+        std::string response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw InvalidMessage("Login failed: " + extractValueBetweenQuotes(response));
         }
 
         if (use_transaction) {
             send_message(clientfd, "BEGIN\n");
-            if (read_response(clientfd, rio) != "OK") {
-                throw OperationException("Transaction begin failed");
+            response = read_response(clientfd, rio);
+            if (response != "OK") {
+                throw OperationException("Failed to begin transaction: " + extractValueBetweenQuotes(response));
             }
         }
 
         send_message(clientfd, "GET " + table + " " + key + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("GET operation failed");
+        response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw OperationException("GET operation failed: " + extractValueBetweenQuotes(response));
         }
 
         send_message(clientfd, "PUSH 1\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("PUSH operation failed");
+        response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw OperationException("PUSH operation failed: " + extractValueBetweenQuotes(response));
         }
 
         send_message(clientfd, "ADD\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("ADD operation failed");
+        response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw OperationException("ADD operation failed: " + extractValueBetweenQuotes(response));
         }
 
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("SET operation failed");
+        response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw OperationException("SET operation failed: " + extractValueBetweenQuotes(response));
         }
 
         if (use_transaction) {
             send_message(clientfd, "COMMIT\n");
-            if (read_response(clientfd, rio) != "OK") {
-                throw OperationException("Transaction commit failed");
+            response = read_response(clientfd, rio);
+            if (response != "OK") {
+                throw OperationException("Failed to commit transaction: " + extractValueBetweenQuotes(response));
             }
         }
 
@@ -100,12 +109,8 @@ int main(int argc, char **argv) {
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         if (clientfd >= 0) {
-            try {
-                send_message(clientfd, "BYE\n");
-                close(clientfd);
-            } catch (...) {
-                // Ignore cleanup errors
-            }
+            send_message(clientfd, "BYE\n");
+            close(clientfd);
         }
         return 2;
     }
