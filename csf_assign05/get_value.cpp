@@ -3,23 +3,21 @@
 #include "csapp.h"
 
 void send_message(int fd, const std::string& msg) {
-    std::cout << "Sending: " << msg;  // Debug output to trace what is sent
     if (rio_writen(fd, msg.c_str(), msg.length()) < 0) {
-        std::cerr << "Communication error: could not send message to server." << std::endl;
-        exit(2);  // Specific exit code for communication errors
+        std::cerr << "Error: Failed to send message.\n";
+        close(fd);
+        exit(1);
     }
 }
 
 std::string read_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    memset(buf, 0, MAXLINE);  // Clear buffer to prevent stale data issues
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        std::cerr << "Communication error: failed to read response from server." << std::endl;
-        exit(2);
+    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+        std::cerr << "Error: Failed to read response from server.\n";
+        close(fd);
+        exit(1);
     }
-    std::string response(buf);
-    std::cout << "Received: " << response;  // Debug output to trace what is received
-    return response;
+    return std::string(buf).erase(buf.find_last_not_of(" \n\r\t")+1);
 }
 
 int main(int argc, char **argv) {
@@ -28,15 +26,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::string hostname = argv[1];
-    std::string port = argv[2];
-    std::string username = argv[3];
-    std::string table = argv[4];
-    std::string key = argv[5];
+    std::string hostname = argv[1], port = argv[2], username = argv[3];
+    std::string table = argv[4], key = argv[5];
 
     int clientfd = open_clientfd(hostname.c_str(), port.c_str());
     if (clientfd < 0) {
-        std::cerr << "Could not connect to server at " << hostname << ":" << port << std::endl;
+        std::cerr << "Error: Could not connect to server.\n";
         return 1;
     }
 
@@ -44,30 +39,27 @@ int main(int argc, char **argv) {
     rio_readinitb(&rio, clientfd);
 
     send_message(clientfd, "LOGIN " + username + "\n");
-    if (read_response(clientfd, rio).find("OK") == std::string::npos) {
-        std::cerr << "Login failed" << std::endl;
+    std::string response = read_response(clientfd, rio);
+    if (response != "OK") {
+        std::cerr << "Login failed: " << response << std::endl;
         close(clientfd);
         return 1;
     }
 
     send_message(clientfd, "GET " + table + " " + key + "\n");
-    std::string response = read_response(clientfd, rio);
-    if (response.find("OK") == std::string::npos) {
+    response = read_response(clientfd, rio);
+    if (response.substr(0, 2) != "OK") {
         std::cerr << "GET command failed: " << response << std::endl;
-        send_message(clientfd, "BYE\n");  // Try to end the session gracefully
         close(clientfd);
         return 1;
     }
 
     send_message(clientfd, "TOP\n");
     response = read_response(clientfd, rio);
-    if (response.substr(0, 4) != "DATA") {
-        std::cerr << "Failed to retrieve value: " << response << std::endl;
-        send_message(clientfd, "BYE\n");
-        close(clientfd);
-        return 1;
+    if (response.substr(0, 4) == "DATA") {
+        std::cout << response.substr(5) << std::endl; // Assumes value follows DATA
     } else {
-        std::cout << "Value: " << response.substr(5) << std::endl;  // Assume DATA value\n format
+        std::cerr << "Failed to retrieve data: " << response << std::endl;
     }
 
     send_message(clientfd, "BYE\n");
