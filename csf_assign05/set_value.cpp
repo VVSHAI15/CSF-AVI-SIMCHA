@@ -1,21 +1,26 @@
 #include <iostream>
 #include <cstring>
 #include "csapp.h"
+#include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.length()) < 0) {
-        std::cerr << "Error: Failed to send message: " << msg << std::endl;
-        exit(2);  // Different exit code for send failures
+    if (rio_writen(fd, msg.c_str(), msg.size()) == -1) {
+        throw CommException("Failed to send message");
     }
 }
 
 std::string read_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        std::cerr << "Error: Failed to read response from server." << std::endl;
-        exit(3);  // Different exit code for read failures
+    if (rio_readlineb(&rio, buf, MAXLINE) == -1) {
+        throw CommException("Failed to read response");
     }
-    return std::string(buf);
+    std::string response(buf);
+    if (response.find("ERROR") != std::string::npos) {
+        throw InvalidMessage("Server returned an error: " + response);
+    } else if (response.find("FAILED") != std::string::npos) {
+        throw OperationException("Operation failed: " + response);
+    }
+    return response.substr(0, response.length() - 1); // Remove newline for easier handling
 }
 
 int main(int argc, char **argv) {
@@ -31,46 +36,28 @@ int main(int argc, char **argv) {
     std::string key = argv[5];
     std::string value = argv[6];
 
-    int clientfd = open_clientfd(hostname.c_str(), port.c_str());
-    if (clientfd < 0) {
-        std::cerr << "Error: Could not connect to server at " << hostname << ":" << port << std::endl;
-        return 4;  // Different exit code for connection failures
-    }
+    try {
+        int clientfd = open_clientfd(hostname.c_str(), port.c_str());
+        rio_t rio;
+        rio_readinitb(&rio, clientfd);
 
-    rio_t rio;
-    rio_readinitb(&rio, clientfd);
+        send_message(clientfd, "LOGIN " + username + "\n");
+        read_response(clientfd, rio); // Expecting "OK"
 
-    send_message(clientfd, "LOGIN " + username + "\n");
-    if (read_response(clientfd, rio) != "OK\n") {
-        std::cerr << "Login failed." << std::endl;
-        close(clientfd);
-        return 5;  // Different exit code for login failures
-    }
+        send_message(clientfd, "PUSH " + value + "\n");
+        read_response(clientfd, rio); // Expecting "OK"
 
-    // Push the value onto the stack
-    send_message(clientfd, "PUSH " + value + "\n");
-    if (read_response(clientfd, rio) != "OK\n") {
-        std::cerr << "Error pushing value onto stack." << std::endl;
+        send_message(clientfd, "SET " + table + " " + key + "\n");
+        std::string response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw OperationException("Failed to set value, server response: " + response);
+        }
+
         send_message(clientfd, "BYE\n");
         close(clientfd);
-        return 6;  // Different exit code for PUSH failures
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 1;
     }
-
-    // Set the value for the key
-    send_message(clientfd, "SET " + table + " " + key + "\n");
-    std::string response = read_response(clientfd, rio);
-    if (response != "OK\n") {
-        std::cerr << "Failed to set value: " << response << std::endl;
-        send_message(clientfd, "BYE\n");
-        close(clientfd);
-        return 7;  // Different exit code for SET failures
-    } else {
-        std::cout << "Value set successfully." << std::endl;
-    }
-
-    // Log out from the server
-    send_message(clientfd, "BYE\n");
-    close(clientfd);
-
     return 0;
 }

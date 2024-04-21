@@ -1,21 +1,26 @@
 #include <iostream>
 #include <cstring>
 #include "csapp.h"
+#include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.size()) < 0) {
-        std::cerr << "Error: Failed to send message: " << msg << std::endl;
-        exit(2);  // Different exit code for send failures
+    if (rio_writen(fd, msg.c_str(), msg.size()) == -1) {
+        throw CommException("Failed to send message");
     }
 }
 
 std::string read_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        std::cerr << "Error: Failed to read response from server." << std::endl;
-        exit(3);  // Different exit code for read failures
+    if (rio_readlineb(&rio, buf, MAXLINE) == -1) {
+        throw CommException("Failed to read response");
     }
-    return std::string(buf);
+    std::string response(buf);
+    if (response.find("ERROR") != std::string::npos) {
+        throw InvalidMessage("Server returned an error: " + response);
+    } else if (response.find("FAILED") != std::string::npos) {
+        throw OperationException("Operation failed: " + response);
+    }
+    return response.substr(0, response.length() - 1); // Remove newline for easier handling
 }
 
 int main(int argc, char **argv) {
@@ -30,42 +35,28 @@ int main(int argc, char **argv) {
     std::string table = argv[4];
     std::string key = argv[5];
 
-    int clientfd = open_clientfd(hostname.c_str(), port.c_str());
-    if (clientfd < 0) {
-        std::cerr << "Error: Could not connect to server at " << hostname << ":" << port << std::endl;
-        return 4;  // Different exit code for connection failures
-    }
+    try {
+        int clientfd = open_clientfd(hostname.c_str(), port.c_str());
+        rio_t rio;
+        rio_readinitb(&rio, clientfd);
 
-    rio_t rio;
-    rio_readinitb(&rio, clientfd);
+        send_message(clientfd, "LOGIN " + username + "\n");
+        read_response(clientfd, rio); // Expecting "OK"
 
-    send_message(clientfd, "LOGIN " + username + "\n");
-    if (read_response(clientfd, rio) != "OK\n") {
-        std::cerr << "Login failed." << std::endl;
-        close(clientfd);
-        return 5;  // Different exit code for login failures
-    }
+        send_message(clientfd, "GET " + table + " " + key + "\n");
+        send_message(clientfd, "TOP\n");
+        std::string response = read_response(clientfd, rio);
+        if (response.substr(0, 4) == "DATA") {
+            std::cout << response.substr(5) << std::endl; // Print the value
+        } else {
+            throw OperationException("Expected DATA, received: " + response);
+        }
 
-    send_message(clientfd, "GET " + table + " " + key + "\n");
-    if (read_response(clientfd, rio) != "OK\n") {
-        std::cerr << "Error retrieving key: " << key << std::endl;
         send_message(clientfd, "BYE\n");
         close(clientfd);
-        return 6;  // Different exit code for GET failures
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 1;
     }
-
-    send_message(clientfd, "TOP\n");
-    std::string response = read_response(clientfd, rio);
-    if (response.substr(0, 5) == "DATA ") {
-        std::cout << response.substr(5);  // Printing the value correctly
-    } else {
-        std::cerr << "Failed to retrieve data for key: " << key << "\n" << response << std::endl;
-        send_message(clientfd, "BYE\n");
-        close(clientfd);
-        return 7;  // Different exit code for TOP failures
-    }
-
-    send_message(clientfd, "BYE\n");
-    close(clientfd);
     return 0;
 }
