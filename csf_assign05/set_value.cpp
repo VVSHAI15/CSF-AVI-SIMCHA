@@ -4,22 +4,21 @@
 #include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    ssize_t result = rio_writen(fd, msg.c_str(), msg.length());
-    if (result != msg.length()) {
-        throw CommException("Failed to send message completely: " + msg);
+    if (rio_writen(fd, msg.c_str(), msg.length()) < 0) {
+        throw CommException("Failed to send message");
     }
 }
 
 std::string read_response(int fd, rio_t& rio) {
-    char buf[MAXLINE] = {0};
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        throw CommException("Failed to read response from server.");
+    char buf[MAXLINE];
+    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+        throw CommException("Failed to read response from server");
     }
-    std::string response = std::string(buf).substr(0, strlen(buf) - 1); // Assume \n is the last char
-    if (response.empty() || response.back() != '\n') {
-        throw InvalidMessage("Server response not properly terminated.");
+    std::string response(buf);
+    if (response.empty() or response.back() != '\n') {
+        throw InvalidMessage("Server response not properly terminated");
     }
-    return response;
+    return response.substr(0, response.length() - 1);
 }
 
 int main(int argc, char **argv) {
@@ -28,17 +27,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::string hostname = argv[1];
-    std::string port = argv[2];
-    std::string username = argv[3];
-    std::string table = argv[4];
-    std::string key = argv[5];
-    std::string value = argv[6];
-
+    std::string hostname = argv[1], port = argv[2], username = argv[3], table = argv[4], key = argv[5], value = argv[6];
+    int clientfd;
     try {
-        int clientfd = open_clientfd(hostname.c_str(), port.c_str());
+        clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
-            throw CommException("Could not connect to server at " + hostname + ":" + port);
+            throw CommException("Could not connect to server");
         }
 
         rio_t rio;
@@ -46,27 +40,30 @@ int main(int argc, char **argv) {
 
         send_message(clientfd, "LOGIN " + username + "\n");
         if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("Login failed.");
+            throw InvalidMessage("Login failed");
         }
 
         send_message(clientfd, "PUSH " + value + "\n");
         if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("Error pushing value onto stack.");
+            throw OperationException("Failed to push value onto stack");
         }
 
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        std::string response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("Failed to set value: " + response);
-        } else {
-            std::cout << "Value set successfully." << std::endl;
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("Failed to set value");
         }
+
+        std::cout << "Value set successfully." << std::endl;
 
         send_message(clientfd, "BYE\n");
         close(clientfd);
+        return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
+        if (clientfd >= 0) {
+            send_message(clientfd, "BYE\n");
+            close(clientfd);
+        }
         return 2;
     }
-    return 0;
 }
