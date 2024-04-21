@@ -1,20 +1,23 @@
 #include <iostream>
+#include <cstring> 
 #include "csapp.h"
 #include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.size()) != msg.size()) {
+    ssize_t write_result = rio_writen(fd, msg.c_str(), msg.length());
+    if (write_result < 0 || static_cast<size_t>(write_result) != msg.length()) {
         throw CommException("Failed to send message: " + msg);
     }
 }
 
 std::string read_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+    memset(buf, 0, MAXLINE); // Clear the buffer to ensure no residual data
+    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
         throw CommException("Failed to read response from server.");
     }
     std::string response(buf);
-    if (response.empty() || response.back() != '\n') {
+    if (response.empty() or response.back() != '\n') {
         throw InvalidMessage("Server response not properly terminated.");
     }
     return response.substr(0, response.length() - 1);  // Remove the newline character
@@ -26,11 +29,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    try {
-        std::string hostname = argv[1], port = argv[2], username = argv[3];
-        std::string table = argv[4], key = argv[5], value = argv[6];
+    std::string hostname = argv[1];
+    std::string port = argv[2]; // Port should be a string for compatibility with open_clientfd
+    std::string username = argv[3];
+    std::string table = argv[4];
+    std::string key = argv[5];
+    std::string value = argv[6];
 
-        int clientfd = open_clientfd(hostname.c_str(), port.c_str());
+    int clientfd = -1; // Define clientfd here to ensure it is accessible in the catch block
+
+    try {
+        clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
             throw CommException("Could not connect to server at " + hostname + ":" + port);
         }
@@ -40,7 +49,7 @@ int main(int argc, char **argv) {
 
         send_message(clientfd, "LOGIN " + username + "\n");
         if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("Login failed.");
+            throw InvalidMessage("Login failed.");
         }
 
         send_message(clientfd, "PUSH " + value + "\n");
@@ -51,17 +60,21 @@ int main(int argc, char **argv) {
         send_message(clientfd, "SET " + table + " " + key + "\n");
         std::string response = read_response(clientfd, rio);
         if (response != "OK") {
-            throw OperationException("Failed to set value. Server said: " + response);
+            throw OperationException("Failed to set value: " + response);
+        } else {
+            std::cout << "Value set successfully for " + key + " in " + table + "." << std::endl;
         }
 
         send_message(clientfd, "BYE\n");
-        read_response(clientfd, rio);  // Ensure we read the final "OK" from BYE
-
+        read_response(clientfd, rio);  // Confirm the BYE command
         close(clientfd);
-        std::cout << "Value set successfully.\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
+        if (clientfd >= 0) {
+            send_message(clientfd, "BYE\n"); // Attempt to close connection gracefully
+            close(clientfd);
+        }
         return 1;
     }
 }
