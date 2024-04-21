@@ -3,19 +3,19 @@
 #include <iostream>
 #include <cstring>
 
-// Helper function to extract a quoted message from a response
-std::string extractQuotedMessage(const std::string& response) {
-    size_t firstQuote = response.find('"');
-    if (firstQuote == std::string::npos) return "";
-    size_t secondQuote = response.find('"', firstQuote + 1);
-    if (secondQuote == std::string::npos) return "";
-    return response.substr(firstQuote + 1, secondQuote - firstQuote - 1);
-}
+// Extracts the value between the first pair of quotes in the input string.
+std::string extractValueBetweenQuotes(const std::string &input) {
+    size_t start = input.find('"');
+    if (start == std::string::npos) {
+        return ""; // No opening quote found
+    }
 
-void send_message(int fd, const std::string &msg) {
-  if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
-    throw CommException("Failed to send message");
-  }
+    size_t end = input.find('"', start + 1);
+    if (end == std::string::npos) {
+        return ""; // No closing quote found
+    }
+
+    return input.substr(start + 1, end - start - 1);
 }
 
 std::string read_response(int fd, rio_t &rio) {
