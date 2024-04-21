@@ -3,7 +3,7 @@
 #include <cstring>
 #include <iostream>
 
-// Extracts the value between the first pair of quotes in the input string.
+// Helper function to extract values between quotes for detailed error messages
 std::string extractValueBetweenQuotes(const std::string &input) {
     size_t start = input.find('"');
     if (start == std::string::npos) {
@@ -18,6 +18,7 @@ std::string extractValueBetweenQuotes(const std::string &input) {
     return input.substr(start + 1, end - start - 1);
 }
 
+// Send messages to the server, throwing an exception on failure
 void send_message(int fd, const std::string &msg) {
     if (rio_writen(fd, msg.c_str(), msg.size()) !=
         static_cast<ssize_t>(msg.size())) {
@@ -25,6 +26,7 @@ void send_message(int fd, const std::string &msg) {
     }
 }
 
+// Read responses from the server, applying strict error handling
 std::string read_response(int fd, rio_t &rio) {
     char buf[MAXLINE];
     if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
@@ -64,37 +66,20 @@ int main(int argc, char **argv) {
         send_message(clientfd, "LOGIN " + username + "\n");
         std::string login_response = read_response(clientfd, rio);
         if (login_response != "OK") {
-            std::string error_message = extractValueBetweenQuotes(login_response);
-            if (error_message.empty()) {
-                throw InvalidMessage("Login failed");
-            } else {
-                throw InvalidMessage(error_message);
-            }
+            throw InvalidMessage(extractValueBetweenQuotes(login_response));
         }
 
         if (use_transaction) {
             send_message(clientfd, "BEGIN\n");
-            std::string begin_response = read_response(clientfd, rio);
-            if (begin_response != "OK") {
-                std::string error_message = extractValueBetweenQuotes(begin_response);
-                if (error_message.empty()) {
-                    throw InvalidMessage("Transaction begin failed");
-                } else {
-                    throw InvalidMessage(error_message);
-                }
+            if (read_response(clientfd, rio) != "OK") {
+                throw FailedTransaction("Transaction begin failed");
             }
         }
 
-        // Increment the value sequence
+        // Retrieve the current value, increment it, and set it back
         send_message(clientfd, "GET " + table + " " + key + "\n");
-        std::string get_response = read_response(clientfd, rio);
-        if (get_response != "OK") {
-            std::string error_message = extractValueBetweenQuotes(get_response);
-            if (error_message.empty()) {
-                throw OperationException("Failed to get key");
-            } else {
-                throw OperationException(error_message);
-            }
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("Failed to get key");
         }
 
         send_message(clientfd, "PUSH 1\n");
@@ -102,24 +87,13 @@ int main(int argc, char **argv) {
         send_message(clientfd, "SET " + table + " " + key + "\n");
         std::string set_response = read_response(clientfd, rio);
         if (set_response != "OK") {
-            std::string error_message = extractValueBetweenQuotes(set_response);
-            if (error_message.empty()) {
-                throw InvalidMessage("Increment failed");
-            } else {
-                throw InvalidMessage(error_message);
-            }
+            throw InvalidMessage("Increment operation failed");
         }
 
         if (use_transaction) {
             send_message(clientfd, "COMMIT\n");
-            std::string commit_response = read_response(clientfd, rio);
-            if (commit_response != "OK") {
-                std::string error_message = extractValueBetweenQuotes(commit_response);
-                if (error_message.empty()) {
-                    throw FailedTransaction("Commit failed");
-                } else {
-                    throw FailedTransaction(error_message);
-                }
+            if (read_response(clientfd, rio) != "OK") {
+                throw FailedTransaction("Transaction commit failed");
             }
         }
 
@@ -129,7 +103,7 @@ int main(int argc, char **argv) {
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         if (clientfd >= 0) {
-            send_message(clientfd, "BYE\n");  // Try to close the connection gracefully
+            send_message(clientfd, "BYE\n"); // Try to gracefully close the connection
             close(clientfd);
         }
         return 2;
