@@ -4,8 +4,8 @@
 #include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.size()) < 0) {
-        throw CommException("Failed to send message: " + msg);
+    if (rio_writen(fd, msg.c_str(), msg.length()) != msg.length()) {
+        throw CommException("Failed to send message to server.");
     }
 }
 
@@ -14,7 +14,7 @@ std::string read_response(int fd, rio_t& rio) {
     if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
         throw CommException("Failed to read response from server.");
     }
-    std::string response(buf);
+    std::string response = std::string(buf);
     if (response.empty() || response.back() != '\n') {
         throw InvalidMessage("Server response not properly terminated.");
     }
@@ -27,40 +27,35 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::string hostname = argv[1], port = argv[2], username = argv[3];
-    std::string table = argv[4], key = argv[5];
-
     try {
+        std::string hostname = argv[1];
+        std::string port = argv[2];
+        std::string username = argv[3];
+        std::string table = argv[4];
+        std::string key = argv[5];
+
         int clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
-            throw CommException("Could not connect to server at " + hostname + ":" + port);
+            throw CommException("Could not connect to server.");
         }
 
         rio_t rio;
         rio_readinitb(&rio, clientfd);
 
         send_message(clientfd, "LOGIN " + username + "\n");
-        std::string response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw InvalidMessage("Login failed: " + response);
+        if (read_response(clientfd, rio) != "OK") {
+            throw OperationException("Login failed.");
         }
 
         send_message(clientfd, "GET " + table + " " + key + "\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("GET command failed: " + response);
+        std::string response = read_response(clientfd, rio);
+        if (response.substr(0, 4) != "DATA") {
+            throw OperationException("GET command failed or no data returned.");
         }
 
-        send_message(clientfd, "TOP\n");
-        response = read_response(clientfd, rio);
-        if (response.substr(0, 4) == "DATA") {
-            std::cout << response.substr(5) << std::endl; // Prints the value
-        } else {
-            throw OperationException("TOP command failed: " + response);
-        }
+        std::cout << response.substr(5) << std::endl; // Output the value
 
         send_message(clientfd, "BYE\n");
-        read_response(clientfd, rio); // Optionally check for "OK"
         close(clientfd);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
