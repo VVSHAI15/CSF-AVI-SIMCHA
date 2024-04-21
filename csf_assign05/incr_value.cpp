@@ -1,24 +1,21 @@
 #include <iostream>
-#include <cstring>
+#include <string>
 #include "csapp.h"
 #include "exceptions.h"
 
-void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
-        throw CommException("Failed to send message");
+bool send_command_and_check(int fd, const std::string& cmd, rio_t& rio) {
+    if (rio_writen(fd, cmd.c_str(), cmd.length()) < 0) {
+        throw CommException("Communication error on sending command: " + cmd);
     }
-}
-
-std::string read_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
-        throw CommException("Failed to read response from server");
+    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+        throw CommException("Communication error on receiving response.");
     }
     std::string response(buf);
-    if (response.empty() || response.back() != '\n') {
-        throw InvalidMessage("Server response not properly terminated");
+    if (response.substr(0, 2) != "OK") {
+        throw OperationException("Server response indicated failure: " + response);
     }
-    return response.substr(0, response.size() - 1);
+    return true;
 }
 
 int main(int argc, char **argv) {
@@ -27,7 +24,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    bool use_transaction = (argc == 7 && std::string(argv[1]) == "-t");
+    bool use_transaction = (argc == 7);
     int index = use_transaction ? 2 : 1;
     std::string hostname = argv[index++];
     std::string port = argv[index++];
@@ -38,55 +35,42 @@ int main(int argc, char **argv) {
     try {
         int clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
-            throw CommException("Could not connect to server");
+            throw CommException("Failed to connect to the server at " + hostname + ":" + port);
         }
 
         rio_t rio;
         rio_readinitb(&rio, clientfd);
 
-        send_message(clientfd, "LOGIN " + username + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw InvalidMessage("Login failed");
+        if (!send_command_and_check(clientfd, "LOGIN " + username + "\n", rio)) {
+            close(clientfd);
+            return 1;
         }
 
-        if (use_transaction) {
-            send_message(clientfd, "BEGIN\n");
-            if (read_response(clientfd, rio) != "OK") {
-                throw OperationException("Transaction start failed");
+        if (use_transaction && !send_command_and_check(clientfd, "BEGIN\n", rio)) {
+            send_command_and_check(clientfd, "BYE\n", rio);
+            close(clientfd);
+            return 1;
+        }
+
+        if (!send_command_and_check(clientfd, "GET " + table + " " + key + "\n", rio) ||
+            !send_command_and_check(clientfd, "PUSH 1\n", rio) ||
+            !send_command_and_check(clientfd, "ADD\n", rio) ||
+            !send_command_and_check(clientfd, "SET " + table + " " + key + "\n", rio)) {
+            if (use_transaction) {
+                send_command_and_check(clientfd, "ROLLBACK\n", rio);
             }
+            send_command_and_check(clientfd, "BYE\n", rio);
+            close(clientfd);
+            return 1;
         }
 
-        // Get current value
-        send_message(clientfd, "GET " + table + " " + key + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("GET command failed");
+        if (use_transaction && !send_command_and_check(clientfd, "COMMIT\n", rio)) {
+            send_command_and_check(clientfd, "BYE\n", rio);
+            close(clientfd);
+            return 1;
         }
 
-        // Increment value
-        send_message(clientfd, "PUSH 1\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("PUSH command failed");
-        }
-
-        send_message(clientfd, "ADD\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("ADD command failed");
-        }
-
-        // Set new value
-        send_message(clientfd, "SET " + table + " " + key + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("SET command failed");
-        }
-
-        if (use_transaction) {
-            send_message(clientfd, "COMMIT\n");
-            if (read_response(clientfd, rio) != "OK") {
-                throw FailedTransaction("Transaction commit failed");
-            }
-        }
-
-        send_message(clientfd, "BYE\n");
+        send_command_and_check(clientfd, "BYE\n", rio);
         close(clientfd);
         return 0;
     } catch (const std::exception& e) {
