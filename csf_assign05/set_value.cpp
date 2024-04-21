@@ -1,16 +1,17 @@
 #include "csapp.h"
 #include "exceptions.h"
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
+// Extracts the value between the first pair of quotes in the input string.
 std::string extractValueBetweenQuotes(const std::string &input) {
     size_t start = input.find('"');
     if (start == std::string::npos) {
-        return "";
+        return ""; // No opening quote found
     }
     size_t end = input.find('"', start + 1);
     if (end == std::string::npos) {
-        return "";
+        return ""; // No closing quote found
     }
     return input.substr(start + 1, end - start - 1);
 }
@@ -42,7 +43,6 @@ int main(int argc, char **argv) {
     std::string hostname = argv[1], port = argv[2], username = argv[3],
                 table = argv[4], key = argv[5], value = argv[6];
     int clientfd;
-
     try {
         clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
@@ -53,19 +53,23 @@ int main(int argc, char **argv) {
         rio_readinitb(&rio, clientfd);
 
         send_message(clientfd, "LOGIN " + username + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            std::string error_message = extractValueBetweenQuotes(read_response(clientfd, rio));
-            throw InvalidMessage(error_message.empty() ? "Login failed" : error_message);
+        std::string rep_login = read_response(clientfd, rio);
+        if (rep_login != "OK") {
+            throw InvalidMessage("Login failed: " + extractValueBetweenQuotes(rep_login));
         }
 
+        // Push the value onto the stack
         send_message(clientfd, "PUSH " + value + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("Failed to push value onto stack");
+        std::string rep_push = read_response(clientfd, rio);
+        if (rep_push != "OK") {
+            throw InvalidMessage("Failed to push value: " + extractValueBetweenQuotes(rep_push));
         }
 
+        // Set the value for the key
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        if (read_response(clientfd, rio) != "OK") {
-            throw OperationException("Failed to set key-value pair");
+        std::string response = read_response(clientfd, rio);
+        if (response != "OK") {
+            throw InvalidMessage("Failed to set value: " + extractValueBetweenQuotes(response));
         }
 
         std::cout << "Value set successfully.\n";
