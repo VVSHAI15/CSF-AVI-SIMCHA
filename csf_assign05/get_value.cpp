@@ -4,7 +4,7 @@
 #include "exceptions.h"
 
 void send_message(int fd, const std::string& msg) {
-    if (rio_writen(fd, msg.c_str(), msg.length()) < 0) {
+    if (rio_writen(fd, msg.c_str(), msg.length()) != msg.length()) {
         throw CommException("Failed to send message: " + msg);
     }
 }
@@ -27,8 +27,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    std::string hostname = argv[1];
+    std::string port = argv[2];
+    std::string username = argv[3];
+    std::string table = argv[4];
+    std::string key = argv[5];
+
     try {
-        std::string hostname = argv[1], port = argv[2], username = argv[3], table = argv[4], key = argv[5];
         int clientfd = open_clientfd(hostname.c_str(), port.c_str());
         if (clientfd < 0) {
             throw CommException("Could not connect to server at " + hostname + ":" + port);
