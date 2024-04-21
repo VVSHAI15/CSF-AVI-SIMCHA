@@ -7,27 +7,24 @@
 std::string extractValueBetweenQuotes(const std::string &input) {
   size_t start = input.find('"');
   if (start == std::string::npos) {
-    return ""; // No opening quote found
+    throw InvalidMessage("No opening quote found in error message");
   }
-
   size_t end = input.find('"', start + 1);
   if (end == std::string::npos) {
-    return ""; // No closing quote found
+    throw InvalidMessage("No closing quote found in error message");
   }
-
   return input.substr(start + 1, end - start - 1);
 }
 
 void send_message(int fd, const std::string &msg) {
-  if (rio_writen(fd, msg.c_str(), msg.size()) !=
-      static_cast<ssize_t>(msg.size())) {
+  if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
     throw CommException("Failed to send message");
   }
 }
 
 std::string read_response(int fd, rio_t &rio) {
   char buf[MAXLINE];
-  if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+  if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
     throw CommException("Failed to read response from server");
   }
   std::string response(buf);

@@ -6,27 +6,24 @@
 std::string extractValueBetweenQuotes(const std::string &input) {
   size_t start = input.find('"');
   if (start == std::string::npos) {
-    return ""; // No opening quote found
+    throw InvalidMessage("No opening quote found in error message");
   }
-
   size_t end = input.find('"', start + 1);
   if (end == std::string::npos) {
-    return ""; // No closing quote found
+    throw InvalidMessage("No closing quote found in error message");
   }
-
   return input.substr(start + 1, end - start - 1);
 }
 
 void send_message(int fd, const std::string &msg) {
-  if (rio_writen(fd, msg.c_str(), msg.size()) !=
-      static_cast<ssize_t>(msg.size())) {
+  if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
     throw CommException("Failed to send message");
   }
 }
 
 std::string read_response(int fd, rio_t &rio) {
   char buf[MAXLINE];
-  if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
+  if (rio_readlineb(&rio, buf, MAXLINE) <= 0) {
     throw CommException("Failed to read response from server");
   }
   std::string response(buf);
@@ -55,19 +52,20 @@ int main(int argc, char **argv) {
     rio_readinitb(&rio, clientfd);
 
     send_message(clientfd, "LOGIN " + username + "\n");
-    if (read_response(clientfd, rio) != "OK") {
-      throw InvalidMessage("Login failed");
+    std::string rep_login = read_response(clientfd, rio);
+    if (rep_login != "OK") {
+      throw InvalidMessage("Login failed: " + extractValueBetweenQuotes(rep_login));
     }
 
     send_message(clientfd, "PUSH " + value + "\n");
     if (read_response(clientfd, rio) != "OK") {
-      throw OperationException("Failed to push value onto stack");
+      throw OperationException("Error pushing value onto stack");
     }
 
     send_message(clientfd, "SET " + table + " " + key + "\n");
     std::string set_response = read_response(clientfd, rio);
     if (set_response != "OK") {
-      throw OperationException("Failed to set value: " + set_response);
+      throw OperationException("Failed to set value: " + extractValueBetweenQuotes(set_response));
     }
 
     std::cout << "Value set successfully for " << key << std::endl;
