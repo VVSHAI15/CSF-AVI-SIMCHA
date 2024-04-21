@@ -9,10 +9,12 @@ std::string extractValueBetweenQuotes(const std::string &input) {
     if (start == std::string::npos) {
         return ""; // No opening quote found
     }
+
     size_t end = input.find('"', start + 1);
     if (end == std::string::npos) {
         return ""; // No closing quote found
     }
+
     return input.substr(start + 1, end - start - 1);
 }
 
@@ -55,21 +57,34 @@ int main(int argc, char **argv) {
         send_message(clientfd, "LOGIN " + username + "\n");
         std::string rep_login = read_response(clientfd, rio);
         if (rep_login != "OK") {
-            throw InvalidMessage("Login failed: " + extractValueBetweenQuotes(rep_login));
+            std::string error_message = extractValueBetweenQuotes(rep_login);
+            if (error_message.empty()) {
+                throw InvalidMessage("Failed to login");
+            } else {
+                throw InvalidMessage(error_message);
+            }
         }
 
-        // Push the value onto the stack
         send_message(clientfd, "PUSH " + value + "\n");
         std::string rep_push = read_response(clientfd, rio);
         if (rep_push != "OK") {
-            throw InvalidMessage("Failed to push value: " + extractValueBetweenQuotes(rep_push));
+            std::string error_message = extractValueBetweenQuotes(rep_push);
+            if (error_message.empty()) {
+                throw InvalidMessage("Failed to push value onto stack");
+            } else {
+                throw InvalidMessage(error_message);
+            }
         }
 
-        // Set the value for the key
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        std::string response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw InvalidMessage("Failed to set value: " + extractValueBetweenQuotes(response));
+        std::string rep_set = read_response(clientfd, rio);
+        if (rep_set != "OK") {
+            std::string error_message = extractValueBetweenQuotes(rep_set);
+            if (error_message.empty()) {
+                throw InvalidMessage("Failed to set value");
+            } else {
+                throw InvalidMessage(error_message);
+            }
         }
 
         std::cout << "Value set successfully.\n";
@@ -80,7 +95,7 @@ int main(int argc, char **argv) {
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         if (clientfd >= 0) {
-            send_message(clientfd, "BYE\n");
+            send_message(clientfd, "BYE\n"); // Try to close the connection gracefully
             close(clientfd);
         }
         return 2;

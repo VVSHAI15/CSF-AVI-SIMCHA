@@ -1,7 +1,7 @@
 #include "csapp.h"
 #include "exceptions.h"
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
 // Extracts the value between the first pair of quotes in the input string.
 std::string extractValueBetweenQuotes(const std::string &input) {
@@ -19,7 +19,8 @@ std::string extractValueBetweenQuotes(const std::string &input) {
 }
 
 void send_message(int fd, const std::string &msg) {
-    if (rio_writen(fd, msg.c_str(), msg.size()) != static_cast<ssize_t>(msg.size())) {
+    if (rio_writen(fd, msg.c_str(), msg.size()) !=
+        static_cast<ssize_t>(msg.size())) {
         throw CommException("Failed to send message");
     }
 }
@@ -43,9 +44,12 @@ int main(int argc, char **argv) {
     }
 
     bool use_transaction = (argc == 7);
-    int idx = use_transaction ? 2 : 1;
-    std::string hostname = argv[idx++], port = argv[idx++], username = argv[idx++],
-                table = argv[idx++], key = argv[idx++];
+    int index = use_transaction ? 2 : 1;
+    std::string hostname = argv[index++];
+    std::string port = argv[index++];
+    std::string username = argv[index++];
+    std::string table = argv[index++];
+    std::string key = argv[index++];
     int clientfd;
 
     try {
@@ -58,48 +62,64 @@ int main(int argc, char **argv) {
         rio_readinitb(&rio, clientfd);
 
         send_message(clientfd, "LOGIN " + username + "\n");
-        std::string response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw InvalidMessage("Login failed: " + extractValueBetweenQuotes(response));
+        std::string login_response = read_response(clientfd, rio);
+        if (login_response != "OK") {
+            std::string error_message = extractValueBetweenQuotes(login_response);
+            if (error_message.empty()) {
+                throw InvalidMessage("Login failed");
+            } else {
+                throw InvalidMessage(error_message);
+            }
         }
 
         if (use_transaction) {
             send_message(clientfd, "BEGIN\n");
-            response = read_response(clientfd, rio);
-            if (response != "OK") {
-                throw OperationException("Failed to begin transaction: " + extractValueBetweenQuotes(response));
+            std::string begin_response = read_response(clientfd, rio);
+            if (begin_response != "OK") {
+                std::string error_message = extractValueBetweenQuotes(begin_response);
+                if (error_message.empty()) {
+                    throw InvalidMessage("Transaction begin failed");
+                } else {
+                    throw InvalidMessage(error_message);
+                }
             }
         }
 
+        // Increment the value sequence
         send_message(clientfd, "GET " + table + " " + key + "\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("GET operation failed: " + extractValueBetweenQuotes(response));
+        std::string get_response = read_response(clientfd, rio);
+        if (get_response != "OK") {
+            std::string error_message = extractValueBetweenQuotes(get_response);
+            if (error_message.empty()) {
+                throw OperationException("Failed to get key");
+            } else {
+                throw OperationException(error_message);
+            }
         }
 
         send_message(clientfd, "PUSH 1\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("PUSH operation failed: " + extractValueBetweenQuotes(response));
-        }
-
         send_message(clientfd, "ADD\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("ADD operation failed: " + extractValueBetweenQuotes(response));
-        }
-
         send_message(clientfd, "SET " + table + " " + key + "\n");
-        response = read_response(clientfd, rio);
-        if (response != "OK") {
-            throw OperationException("SET operation failed: " + extractValueBetweenQuotes(response));
+        std::string set_response = read_response(clientfd, rio);
+        if (set_response != "OK") {
+            std::string error_message = extractValueBetweenQuotes(set_response);
+            if (error_message.empty()) {
+                throw InvalidMessage("Increment failed");
+            } else {
+                throw InvalidMessage(error_message);
+            }
         }
 
         if (use_transaction) {
             send_message(clientfd, "COMMIT\n");
-            response = read_response(clientfd, rio);
-            if (response != "OK") {
-                throw OperationException("Failed to commit transaction: " + extractValueBetweenQuotes(response));
+            std::string commit_response = read_response(clientfd, rio);
+            if (commit_response != "OK") {
+                std::string error_message = extractValueBetweenQuotes(commit_response);
+                if (error_message.empty()) {
+                    throw FailedTransaction("Commit failed");
+                } else {
+                    throw FailedTransaction(error_message);
+                }
             }
         }
 
@@ -109,7 +129,7 @@ int main(int argc, char **argv) {
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
         if (clientfd >= 0) {
-            send_message(clientfd, "BYE\n");
+            send_message(clientfd, "BYE\n");  // Try to close the connection gracefully
             close(clientfd);
         }
         return 2;
