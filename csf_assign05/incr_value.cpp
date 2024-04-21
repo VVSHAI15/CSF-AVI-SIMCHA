@@ -1,25 +1,33 @@
 #include <iostream>
 #include <string>
 #include "csapp.h"
+#include "exceptions.h"
 
-// Helper function to send commands to the server and check for OK response
-bool send_command_and_check(int fd, const std::string& cmd, rio_t& rio) {
-    std::cout << "Sending command: " << cmd;  // For debugging
-    if (rio_writen(fd, cmd.c_str(), cmd.length()) < 0) {
-        std::cerr << "Communication error on sending command: " << cmd << std::endl;
-        return false;
+// Helper function to send a command to the server and check for errors
+void send_command(int fd, const std::string& cmd) {
+    std::cout << "Sending command: " << cmd;  // Debug output
+    if (rio_writen(fd, cmd.c_str(), cmd.size()) == -1) {
+        throw CommException("Failed to send command to server.");
     }
+}
+
+// Helper function to read a response from the server and handle errors
+std::string receive_response(int fd, rio_t& rio) {
     char buf[MAXLINE];
-    if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
-        std::cerr << "Communication error on receiving response." << std::endl;
-        return false;
+    if (rio_readlineb(&rio, buf, MAXLINE) == -1) {
+        throw CommException("Failed to receive response from server.");
     }
-    std::string response = std::string(buf);
-    if (response.substr(0, 2) != "OK") {
-        std::cerr << "Server response indicated failure: " << response << std::endl;
-        return false;
+    std::string response(buf);
+    if (response.empty() || response.back() != '\n') {
+        throw InvalidMessage("Server response not properly terminated with newline.");
     }
-    return true;
+    response.pop_back(); // Remove the newline character
+    if (response.find("ERROR") != std::string::npos) {
+        throw InvalidMessage("Server returned an error: " + response);
+    } else if (response.find("FAILED") != std::string::npos) {
+        throw OperationException("Operation failed: " + response);
+    }
+    return response;
 }
 
 int main(int argc, char **argv) {
@@ -36,48 +44,43 @@ int main(int argc, char **argv) {
     std::string table = argv[index++];
     std::string key = argv[index++];
 
-    int clientfd = open_clientfd(hostname.c_str(), port.c_str());
-    if (clientfd < 0) {
-        std::cerr << "Failed to connect to the server at " << hostname << ":" << port << std::endl;
-        return 1;
-    }
+    try {
+        int clientfd = open_clientfd(hostname.c_str(), port.c_str());
+        rio_t rio;
+        rio_readinitb(&rio, clientfd);
 
-    rio_t rio;
-    rio_readinitb(&rio, clientfd);
+        send_command(clientfd, "LOGIN " + username + "\n");
+        receive_response(clientfd, rio); // Expect "OK"
 
-    // Login
-    if (!send_command_and_check(clientfd, "LOGIN " + username + "\n", rio)) {
-        close(clientfd);
-        return 1;
-    }
-
-    if (use_transaction && !send_command_and_check(clientfd, "BEGIN\n", rio)) {
-        send_command_and_check(clientfd, "BYE\n", rio);
-        close(clientfd);
-        return 1;
-    }
-
-    // Perform the increment sequence
-    if (!send_command_and_check(clientfd, "GET " + table + " " + key + "\n", rio) ||
-        !send_command_and_check(clientfd, "PUSH 1\n", rio) ||
-        !send_command_and_check(clientfd, "ADD\n", rio) ||
-        !send_command_and_check(clientfd, "SET " + table + " " + key + "\n", rio)) {
         if (use_transaction) {
-            send_command_and_check(clientfd, "ROLLBACK\n", rio);
+            send_command(clientfd, "BEGIN\n");
+            receive_response(clientfd, rio); // Expect "OK"
         }
-        send_command_and_check(clientfd, "BYE\n", rio);
+
+        send_command(clientfd, "GET " + table + " " + key + "\n");
+        receive_response(clientfd, rio); // Should be "OK"
+
+        send_command(clientfd, "PUSH 1\n");
+        receive_response(clientfd, rio); // Should be "OK"
+
+        send_command(clientfd, "ADD\n");
+        receive_response(clientfd, rio); // Should be "OK"
+
+        send_command(clientfd, "SET " + table + " " + key + "\n");
+        receive_response(clientfd, rio); // Should be "OK"
+
+        if (use_transaction) {
+            send_command(clientfd, "COMMIT\n");
+            receive_response(clientfd, rio); // Expect "OK"
+        }
+
+        send_command(clientfd, "BYE\n");
+        receive_response(clientfd, rio); // Expect "OK"
+
         close(clientfd);
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }
-
-    if (use_transaction && !send_command_and_check(clientfd, "COMMIT\n", rio)) {
-        send_command_and_check(clientfd, "BYE\n", rio);
-        close(clientfd);
-        return 1;
-    }
-
-    // Logout
-    send_command_and_check(clientfd, "BYE\n", rio);
-    close(clientfd);
     return 0;
 }
