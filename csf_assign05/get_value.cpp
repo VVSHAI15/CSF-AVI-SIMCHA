@@ -1,6 +1,5 @@
 #include "csapp.h"
 #include "exceptions.h"
-#include <asm-generic/errno.h>
 #include <cstring>
 #include <iostream>
 
