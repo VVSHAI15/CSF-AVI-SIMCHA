@@ -18,7 +18,6 @@ std::string extractValueBetweenQuotes(const std::string &input) {
   return input.substr(start + 1, end - start - 1);
 }
 
-// Send a message to the server
 void send_message(int fd, const std::string &msg) {
   if (rio_writen(fd, msg.c_str(), msg.size()) !=
       static_cast<ssize_t>(msg.size())) {
@@ -26,7 +25,6 @@ void send_message(int fd, const std::string &msg) {
   }
 }
 
-// Read response from the server
 std::string read_response(int fd, rio_t &rio) {
   char buf[MAXLINE];
   if (rio_readlineb(&rio, buf, MAXLINE) < 0) {
@@ -40,7 +38,6 @@ std::string read_response(int fd, rio_t &rio) {
 }
 
 int main(int argc, char **argv) {
-  // Check command line arguments
   if (argc != 6 && (argc != 7 || std::string(argv[1]) != "-t")) {
     std::cerr << "Usage: ./incr_value [-t] <hostname> <port> <username> "
                  "<table> <key>\n";
@@ -56,7 +53,6 @@ int main(int argc, char **argv) {
   std::string key = argv[index++];
 
   try {
-    // Connect to the server
     int clientfd = open_clientfd(hostname.c_str(), port.c_str());
     if (clientfd < 0) {
       throw CommException("Could not connect to server");
@@ -65,7 +61,6 @@ int main(int argc, char **argv) {
     rio_t rio;
     rio_readinitb(&rio, clientfd);
 
-    // Login to the server
     send_message(clientfd, "LOGIN " + username + "\n");
     std::string rep_login = read_response(clientfd, rio);
     if (rep_login != "OK") {
@@ -77,7 +72,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    // Start a transaction if enabled
     if (transaction) {
       send_message(clientfd, "BEGIN\n");
       std::string rep_begin = read_response(clientfd, rio);
@@ -91,7 +85,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    // Perform operations
     send_message(clientfd, "GET " + table + " " + key + "\n");
     std::string rep_get = read_response(clientfd, rio);
     if (rep_get != "OK") {
@@ -136,7 +129,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    // Commit transaction if enabled
     if (transaction) {
       send_message(clientfd, "COMMIT\n");
       std::string rep_commit = read_response(clientfd, rio);
@@ -150,12 +142,10 @@ int main(int argc, char **argv) {
       }
     }
 
-    // Send BYE command to the server and close the connection
     send_message(clientfd, "BYE\n");
     close(clientfd);
     return 0;
   } catch (const std::exception &e) {
-    // Handle exceptions and print error messages
     std::cerr << "Error: " << e.what() << std::endl;
     return 2;
   }
