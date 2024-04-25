@@ -1,6 +1,7 @@
 /*
  * TCTest - a tiny unit test framework for C and C++
- * Copyright (c) 2013,2019-2021,2023,2024 David H. Hovemeyer <david.hovemeyer@gmail.com>
+ * Copyright (c) 2013,2019-2021,2023,2024 David H. Hovemeyer
+ * <david.hovemeyer@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -26,9 +27,9 @@
 #define TCTEST_H
 
 #ifdef __cplusplus
-#include <stdexcept>
 #include <cstdio>
 #include <cstring>
+#include <stdexcept>
 #else
 #include <stdio.h>
 #include <string.h>
@@ -41,9 +42,9 @@ extern "C" {
 #endif
 
 #ifdef __GNUC__
-#  define TCTEST_PRINTF_FORMAT_ATTR __attribute__ ((format (printf, 1, 2)))
+#define TCTEST_PRINTF_FORMAT_ATTR __attribute__((format(printf, 1, 2)))
 #else
-#  define TCTEST_PRINTF_FORMAT_ATTR
+#define TCTEST_PRINTF_FORMAT_ATTR
 #endif
 
 extern sigjmp_buf tctest_env;
@@ -92,95 +93,104 @@ extern void (*tctest_on_complete)(int num_passed, int num_executed);
  * and count them as test failures
  */
 
-#  define TCTEST_TRY \
-	try {
+#define TCTEST_TRY try {
 
-#  define TCTEST_CATCH(func) \
-	} catch (std::exception &ex) { \
-		printf("std::exception (what='%s')\n", ex.what()); \
-		tctest_failures++; \
-		if (tctest_on_test_executed) { \
-			tctest_on_test_executed(#func, 0); \
-		} \
-	} catch (...) { \
-		printf("exception\n"); \
-		tctest_failures++; \
-		if (tctest_on_test_executed) { \
-			tctest_on_test_executed(#func, 0); \
-		} \
-	}
+#define TCTEST_CATCH(func)                                                     \
+  }                                                                            \
+  catch (std::exception & ex) {                                                \
+    printf("std::exception (what='%s')\n", ex.what());                         \
+    tctest_failures++;                                                         \
+    if (tctest_on_test_executed) {                                             \
+      tctest_on_test_executed(#func, 0);                                       \
+    }                                                                          \
+  }                                                                            \
+  catch (...) {                                                                \
+    printf("exception\n");                                                     \
+    tctest_failures++;                                                         \
+    if (tctest_on_test_executed) {                                             \
+      tctest_on_test_executed(#func, 0);                                       \
+    }                                                                          \
+  }
 
 #else
 /*
  * No try/catch in plain C code
  */
-#  define TCTEST_TRY
-#  define TCTEST_CATCH(func)
+#define TCTEST_TRY
+#define TCTEST_CATCH(func)
 #endif
 
-#define TEST_INIT() do { \
-	tctest_register_signal_handlers(); \
-} while (0)
+#define TEST_INIT()                                                            \
+  do {                                                                         \
+    tctest_register_signal_handlers();                                         \
+  } while (0)
 
-#define TEST(func) do { \
-	if (!tctest_testname_to_execute || strcmp(tctest_testname_to_execute, #func) == 0) { \
-		TestObjs *t = 0; \
-		tctest_num_executed++; \
-		tctest_assertion_line = -1; \
-		TCTEST_TRY \
-		if (sigsetjmp(tctest_env, 1) == 0) { \
-			t = setup(); \
-			printf("%s...", #func); \
-			fflush(stdout); \
-			func(t); \
-			printf("passed!\n"); \
-			if (tctest_on_test_executed) { \
-				tctest_on_test_executed(#func, 1); \
-			} \
-		} else { \
-			tctest_failures++; \
-			if (tctest_on_test_executed) { \
-				tctest_on_test_executed(#func, 0); \
-			} \
-		} \
-		TCTEST_CATCH(func) \
-		if (t) { \
-			cleanup(t); \
-		} \
-	} \
-} while (0)
+#define TEST(func)                                                             \
+  do {                                                                         \
+    if (!tctest_testname_to_execute ||                                         \
+        strcmp(tctest_testname_to_execute, #func) == 0) {                      \
+      TestObjs *t = 0;                                                         \
+      tctest_num_executed++;                                                   \
+      tctest_assertion_line = -1;                                              \
+      TCTEST_TRY                                                               \
+      if (sigsetjmp(tctest_env, 1) == 0) {                                     \
+        t = setup();                                                           \
+        printf("%s...", #func);                                                \
+        fflush(stdout);                                                        \
+        func(t);                                                               \
+        printf("passed!\n");                                                   \
+        if (tctest_on_test_executed) {                                         \
+          tctest_on_test_executed(#func, 1);                                   \
+        }                                                                      \
+      } else {                                                                 \
+        tctest_failures++;                                                     \
+        if (tctest_on_test_executed) {                                         \
+          tctest_on_test_executed(#func, 0);                                   \
+        }                                                                      \
+      }                                                                        \
+      TCTEST_CATCH(func)                                                       \
+      if (t) {                                                                 \
+        cleanup(t);                                                            \
+      }                                                                        \
+    }                                                                          \
+  } while (0)
 
-#define ASSERT(cond) do { \
-	tctest_assertion_line = __LINE__; \
-	if (!(cond)) { \
-		tctest_fail("failed ASSERT %s at line %d\n", #cond, __LINE__); \
-	} \
-} while (0)
+#define ASSERT(cond)                                                           \
+  do {                                                                         \
+    tctest_assertion_line = __LINE__;                                          \
+    if (!(cond)) {                                                             \
+      tctest_fail("failed ASSERT %s at line %d\n", #cond, __LINE__);           \
+    }                                                                          \
+  } while (0)
 
 /*
  * Use this macro to unconditionally fail the current test with
  * specified error message.  This is somewhat nicer than doing
  * ASSERT(0).
  */
-#define FAIL(msg) do { \
-	tctest_fail("failed, %s\n", msg); \
-} while (0)
+#define FAIL(msg)                                                              \
+  do {                                                                         \
+    tctest_fail("failed, %s\n", msg);                                          \
+  } while (0)
 
-#define TEST_FINI() do { \
-	if (tctest_failures == 0) { \
-		if (tctest_num_executed > 0) { \
-			printf("All tests passed!\n"); \
-		} else { \
-			printf("No tests were executed!\n"); \
-		} \
-	} else { \
-		printf("%d test(s) failed\n", tctest_failures); \
-	} \
-	if (tctest_on_complete) { \
-		tctest_on_complete(tctest_num_executed - tctest_failures, tctest_num_executed); \
-	} \
-	return tctest_failures > 0 || (tctest_failures == 0 && tctest_num_executed == 0); \
-} while (0)
+#define TEST_FINI()                                                            \
+  do {                                                                         \
+    if (tctest_failures == 0) {                                                \
+      if (tctest_num_executed > 0) {                                           \
+        printf("All tests passed!\n");                                         \
+      } else {                                                                 \
+        printf("No tests were executed!\n");                                   \
+      }                                                                        \
+    } else {                                                                   \
+      printf("%d test(s) failed\n", tctest_failures);                          \
+    }                                                                          \
+    if (tctest_on_complete) {                                                  \
+      tctest_on_complete(tctest_num_executed - tctest_failures,                \
+                         tctest_num_executed);                                 \
+    }                                                                          \
+    return tctest_failures > 0 ||                                              \
+           (tctest_failures == 0 && tctest_num_executed == 0);                 \
+  } while (0)
 
 #ifdef __cplusplus
 }

@@ -3,35 +3,24 @@
 #include <stack>
 
 ValueStack::ValueStack()
-  // TODO: initialize member variable(s) (if necessary)
-{
-}
+// TODO: initialize member variable(s) (if necessary)
+{}
 
-ValueStack::~ValueStack()
-{
-}
+ValueStack::~ValueStack() {}
 
-bool ValueStack::is_empty() const
-{
-  return stack.empty();
-}
+bool ValueStack::is_empty() const { return stack.empty(); }
 
-void ValueStack::push( const std::string &value )
-{
-    stack.push(value);
-}
+void ValueStack::push(const std::string &value) { stack.push(value); }
 
-std::string ValueStack::get_top() const
-{
-  if ((is_empty())){
+std::string ValueStack::get_top() const {
+  if ((is_empty())) {
     throw OperationException("Operand Stack is empty");
   }
   return stack.top();
 }
 
-void ValueStack::pop()
-{
-if ((is_empty())){
+void ValueStack::pop() {
+  if ((is_empty())) {
     throw OperationException("Operand Stack is empty");
   }
   stack.pop();

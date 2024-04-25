@@ -5,29 +5,29 @@
 #ifndef __CSAPP_H__
 #define __CSAPP_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
+#include <arpa/inet.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <math.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <dirent.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <errno.h>
-#include <math.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <unistd.h>
 
 // DHH 4/7/2022: I made some changes to allow use with C++ and
 // glibc. Specifically:
@@ -45,8 +45,8 @@ extern "C" {
 
 /* Default file permissions are DEF_MODE & ~DEF_UMASK */
 /* $begin createmasks */
-#define DEF_MODE   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
-#define DEF_UMASK  S_IWGRP|S_IWOTH
+#define DEF_MODE S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
+#define DEF_UMASK S_IWGRP | S_IWOTH
 /* $end createmasks */
 
 /* Simplifies calls to bind(), connect(), and accept() */
@@ -58,10 +58,10 @@ typedef struct sockaddr SA;
 /* $begin rio_t */
 #define RIO_BUFSIZE 8192
 typedef struct {
-    int rio_fd;                /* Descriptor for this internal buf */
-    int rio_cnt;               /* Unread bytes in internal buf */
-    char *rio_bufptr;          /* Next unread byte in internal buf */
-    char rio_buf[RIO_BUFSIZE]; /* Internal buffer */
+  int rio_fd;                /* Descriptor for this internal buf */
+  int rio_cnt;               /* Unread bytes in internal buf */
+  char *rio_bufptr;          /* Next unread byte in internal buf */
+  char rio_buf[RIO_BUFSIZE]; /* Internal buffer */
 } rio_t;
 /* $end rio_t */
 
@@ -70,15 +70,15 @@ extern int h_errno;    /* Defined by BIND for DNS errors */
 extern char **environ; /* Defined by libc */
 
 /* Misc constants */
-#define	MAXLINE	 8192  /* Max text line length */
-#define MAXBUF   8192  /* Max I/O buffer size */
-#define LISTENQ  1024  /* Second argument to listen() */
+#define MAXLINE 8192 /* Max text line length */
+#define MAXBUF 8192  /* Max I/O buffer size */
+#define LISTENQ 1024 /* Second argument to listen() */
 
 /* Our own error-handling functions */
 void unix_error(char *msg);
 void posix_error(int code, char *msg);
 void dns_error(char *msg);
-//void gai_error(int code, char *msg);
+// void gai_error(int code, char *msg);
 void app_error(char *msg);
 
 /* Process control wrappers */
@@ -120,11 +120,11 @@ ssize_t Read(int fd, void *buf, size_t count);
 ssize_t Write(int fd, const void *buf, size_t count);
 off_t Lseek(int fildes, off_t offset, int whence);
 void Close(int fd);
-int Select(int  n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
-	   struct timeval *timeout);
+int Select(int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
+           struct timeval *timeout);
 int Dup2(int fd1, int fd2);
 void Stat(const char *filename, struct stat *buf);
-void Fstat(int fd, struct stat *buf) ;
+void Fstat(int fd, struct stat *buf);
 
 /* Directory wrappers */
 DIR *Opendir(const char *name);
@@ -173,7 +173,7 @@ struct hostent *Gethostbyaddr(const char *addr, int len, int type);
 
 /* Pthreads thread control wrappers */
 void Pthread_create(pthread_t *tidp, pthread_attr_t *attrp,
-		    void * (*routine)(void *), void *argp);
+                    void *(*routine)(void *), void *argp);
 void Pthread_join(pthread_t tid, void **thread_return);
 void Pthread_cancel(pthread_t tid);
 void Pthread_detach(pthread_t tid);
@@ -190,8 +190,8 @@ void V(sem_t *sem);
 ssize_t rio_readn(int fd, void *usrbuf, size_t n);
 ssize_t rio_writen(int fd, const void *usrbuf, size_t n);
 void rio_readinitb(rio_t *rp, int fd);
-ssize_t	rio_readnb(rio_t *rp, void *usrbuf, size_t n);
-ssize_t	rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen);
+ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n);
+ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen);
 
 /* Wrappers for Rio package */
 ssize_t Rio_readn(int fd, void *usrbuf, size_t n);

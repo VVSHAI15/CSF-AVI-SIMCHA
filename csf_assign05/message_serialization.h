@@ -4,8 +4,8 @@
 #include "message.h"
 
 namespace MessageSerialization {
-  void encode(const Message &msg, std::string &encoded_msg);
-  void decode(const std::string &encoded_msg, Message &msg);
-};
+void encode(const Message &msg, std::string &encoded_msg);
+void decode(const std::string &encoded_msg, Message &msg);
+}; // namespace MessageSerialization
 
 #endif // MESSAGE_SERIALIZATION_H

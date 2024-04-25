@@ -8,12 +8,9 @@
 // arguments, etc.)
 class InvalidMessage : public std::runtime_error {
 public:
-  InvalidMessage( const std::string &msg )
-    : std::runtime_error( msg )
-  { }
+  InvalidMessage(const std::string &msg) : std::runtime_error(msg) {}
 
-  ~InvalidMessage()
-  { }
+  ~InvalidMessage() {}
 };
 
 // Exception to indicate a communication error (e.g.,
@@ -21,12 +18,9 @@ public:
 // create or listen on server socket, etc.)
 class CommException : public std::runtime_error {
 public:
-  CommException( const std::string &msg )
-    : std::runtime_error( msg )
-  { }
+  CommException(const std::string &msg) : std::runtime_error(msg) {}
 
-  ~CommException()
-  { }
+  ~CommException() {}
 };
 
 // Exception indicating a requested protocol operation couldn't be
@@ -34,12 +28,9 @@ public:
 // already exists.)
 class OperationException : public std::runtime_error {
 public:
-  OperationException( const std::string &msg )
-    : std::runtime_error( msg )
-  { }
+  OperationException(const std::string &msg) : std::runtime_error(msg) {}
 
-  ~OperationException()
-  { }
+  ~OperationException() {}
 };
 
 // Exception indicating that a transaction has failed because
@@ -48,12 +39,9 @@ public:
 // handling.
 class FailedTransaction : public std::runtime_error {
 public:
-  FailedTransaction( const std::string &msg )
-    : std::runtime_error( msg )
-  { }
+  FailedTransaction(const std::string &msg) : std::runtime_error(msg) {}
 
-  ~FailedTransaction()
-  { }
+  ~FailedTransaction() {}
 };
 
 #endif // EXCEPTIONS_H
