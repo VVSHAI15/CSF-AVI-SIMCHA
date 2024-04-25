@@ -6,9 +6,7 @@
 #include <iostream>
 #include <memory>
 
-Server::Server() {
-  // TODO
-}
+Server::Server() : server_fd(-1) {}
 
 Server::~Server() {
   if (server_fd >= 0) {
