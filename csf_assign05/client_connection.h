@@ -13,6 +13,8 @@ private:
   Server *m_server;
   int m_client_fd;
   rio_t m_fdbuf;
+  std::vector<std::string> locked_tables;
+  bool in_transactions;
 
   // copy constructor and assignment operator are prohibited
   ClientConnection(const ClientConnection &);
@@ -23,6 +25,9 @@ public:
   ~ClientConnection();
 
   void chat_with_client();
+  void handle_exceptions(const std::exception &e);
+  void commit_transactions();
+  void rollback_transactions();
 
   // TODO: additional member functions
 };
