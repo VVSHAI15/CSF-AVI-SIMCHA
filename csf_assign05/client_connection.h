@@ -28,6 +28,7 @@ public:
   void handle_exceptions(const std::exception &e);
   void commit_transactions();
   void rollback_transactions();
+  int get_client_fd() const { return m_client_fd; }
 
   // TODO: additional member functions
 };

@@ -6,65 +6,77 @@
 #include <iostream>
 #include <memory>
 
-Server::Server() : server_fd(-1) {}
-
-Server::~Server() {
-  if (server_fd >= 0) {
-    close(server_fd); // Close server socket
-  }
-
-  for (auto &table : tables) {
-    delete table;
+Server::Server() {
+  server_socket_fd = socket(AF_INET, SOCK_STREAM, 0); // server socket
+  if (server_socket_fd < 0) {
+    log_error("Error creating server socket\n");
   }
 }
 
+Server::~Server() {
+  if (server_socket_fd >= 0) {
+    close(server_socket_fd); // Close server socket
+  }
+
+  // Table closing handeled in table deconstructor.
+}
+
 void Server::listen(const std::string &port) {
-  // server socket should probably be initated somewhere else
-  server_fd = open_listenfd(port.data()); // Open server socket
-  if (server_fd < 0) {
+  server_socket_fd = open_listenfd(
+      port.c_str()); // Open server socket and establish client connection
+  if (server_socket_fd < 0) {
     log_error("Error opening server socket\n");
-    throw CommException("Error opening server socket\n");
   }
 }
 
 /**/
 void Server::server_loop() {
-  while (true) {
-    int client_fd = Accept(server_fd, NULL, NULL);
+  while (1) {
+    int client_fd = Accept(server_socket_fd, NULL, NULL);
     if (client_fd < 0) {
       log_error("Error accepting client connection\n");
-      throw CommException("Error accepting client connection\n");
+      continue; // Doesn't create client connection
     }
-
     ClientConnection *client = new ClientConnection(this, client_fd);
 
-    // creating a detached thread for the client
+    // creating a detached thread for the client to allow for concurency and >1
+    // connections
     pthread_t thr_id;
     if (pthread_create(&thr_id, NULL, client_worker, client) != 0) {
-      delete client; // clean
-      throw CommException("Could not create client thread");
-    } else {
-      pthread_detach(thr_id);
+      close(client_fd); // clean
+      log_error("Could not create client thread");
     }
   }
-
-  /**/
 }
 
 void *Server::client_worker(void *arg) {
-  // TODO: implement
-
-  // Assuming that your ClientConnection class has a member function
-  // called chat_with_client(), your implementation might look something
-  // like this:
-  /*
-    std::unique_ptr<ClientConnection> client( static_cast<ClientConnection *>(
-    arg ) ); client->chat_with_client(); return nullptr;
-  */
+  pthread_detach(pthread_self()); // we want to develop client seperation so
+                                  // we detatch the thread
+  std::unique_ptr<ClientConnection> client(
+      static_cast<ClientConnection *>(arg));
+  try {
+    client->chat_with_client();
+  } catch (CommException &ex) { // Just in case of a communication error
+    client->handle_exceptions(ex);
+  }
+  close(client->get_client_fd());
+  return nullptr;
 }
 
 void Server::log_error(const std::string &what) {
   std::cerr << "Error: " << what << "\n";
 }
 
-// TODO: implement member functions
+void Server::create_table(const std::string &name) {
+  std::shared_ptr<Table> table = std::make_shared<Table>(name);
+  tables.push_back(table);
+}
+
+Table *Server::find_table(const std::string &name) {
+  for (std::shared_ptr<Table> table : tables) {
+    if (table->get_name() == name) {
+      return table.get();
+    }
+  }
+  return nullptr;
+}

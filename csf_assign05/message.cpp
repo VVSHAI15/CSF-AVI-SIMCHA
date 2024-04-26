@@ -95,6 +95,8 @@ std::string Message::message_type_to_string(MessageType type) {
     return "ADD";
   case MessageType::SUB:
     return "SUB";
+  case MessageType::MUL:
+    return "MUL";
   case MessageType::DIV:
     return "DIV";
   case MessageType::BEGIN:
