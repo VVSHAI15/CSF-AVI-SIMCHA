@@ -3,6 +3,7 @@
 
 #include "csapp.h"
 #include "message.h"
+#include "value_stack.h"
 #include <set>
 
 class Server; // forward declaration
@@ -16,6 +17,8 @@ private:
   std::vector<std::string> locked_tables;
   bool in_transactions;
 
+  ValueStack *stack;
+
   // copy constructor and assignment operator are prohibited
   ClientConnection(const ClientConnection &);
   ClientConnection &operator=(const ClientConnection &);
@@ -25,6 +28,7 @@ public:
   ~ClientConnection();
 
   void chat_with_client();
+  void process_message(const Message &message);
   void handle_exceptions(const std::exception &e);
   void commit_transactions();
   void rollback_transactions();
