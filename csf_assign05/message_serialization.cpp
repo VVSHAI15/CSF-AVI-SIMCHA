@@ -16,7 +16,7 @@ void MessageSerialization::encode(const Message &msg,
   ss << msg.message_type_to_string(msg.get_message_type());
   if (msg.is_quoted_text(msg.get_quoted_text())) {
     ss << " ";
-    ss << "\"" << msg.get_quoted_text() << "\" ";
+    ss << msg.get_quoted_text();
   } else if (msg.get_num_args() != 0) {
     ss << " ";
     ss << msg.get_arg(0);
@@ -70,6 +70,6 @@ void MessageSerialization::decode(const std::string &encoded_msg,
   }
 
   if (!msg.is_valid()) {
-    throw InvalidMessage("Decoded message is not valid.");
+    throw InvalidMessage("\"Decoded message is not valid.\"");
   }
 }
