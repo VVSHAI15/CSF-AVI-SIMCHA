@@ -59,7 +59,8 @@ void *Server::client_worker(void *arg) {
   } catch (CommException &ex) { // Just in case of a communication error
     // client->handle_exceptions(ex); //TODO figure this out!!!!!
   }
-  /// close(client->get_client_fd());
+  /// close(client->get_client_fd()); remove this since it closes the client
+  ///  twice
   return nullptr;
 }
 
