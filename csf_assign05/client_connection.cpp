@@ -15,7 +15,6 @@ ClientConnection::ClientConnection(Server *server, int client_fd)
 }
 
 ClientConnection::~ClientConnection() {
-  Close(m_client_fd);
   delete stack;
 }
 
