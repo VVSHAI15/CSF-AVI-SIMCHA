@@ -96,21 +96,23 @@ void ClientConnection::handle_push(const Message &message) {
 }
 
 void ClientConnection::handle_pop() {
-  if (!stack->is_empty()) {
-    stack->pop();
-    send_response(MessageType::OK);
-  } else {
-    send_response(MessageType::ERROR, "Stack empty");
-  }
+    try {
+        stack->pop();
+        send_response(MessageType::OK);
+    } catch (const std::exception& ex) {
+        send_response(MessageType::ERROR, "Stack empty - Cannot pop");
+    }
 }
 
 void ClientConnection::handle_top() {
-  if (!stack->is_empty()) {
-    send_response(MessageType::DATA, stack->get_top());
-  } else {
-    send_response(MessageType::ERROR, "Stack empty");
-  }
+    try {
+        std::string topElement = stack->get_top();
+        send_response(MessageType::DATA, topElement);
+    } catch (const std::exception& ex) {
+        send_response(MessageType::ERROR, "Stack empty - No top element");
+    }
 }
+
 
 void ClientConnection::handle_add() {
   // must check the stack has 2 left
