@@ -113,72 +113,103 @@ void ClientConnection::handle_top() {
   }
 }
 
-
 void ClientConnection::handle_add() {
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Addition failed: stack underflow");
+    return;
+  }
+  std::string num1_str = stack->get_top(); stack->pop();
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Addition failed: stack underflow");
+    stack->push(num1_str); // Push back the first number to maintain state
+    return;
+  }
+  std::string num2_str = stack->get_top(); stack->pop();
+
   try {
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int num1 = std::stoi(stack->get_top()); stack->pop();
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int num2 = std::stoi(stack->get_top()); stack->pop();
+    int num1 = std::stoi(num1_str);
+    int num2 = std::stoi(num2_str);
     int sum = num1 + num2;
     stack->push(std::to_string(sum));
     send_response(MessageType::OK);
   } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Operands must be integers for addition");
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
+    send_response(MessageType::ERROR, "Addition failed: non-numeric operands");
   }
 }
 
 void ClientConnection::handle_sub() {
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Subtraction failed: stack underflow");
+    return;
+  }
+  std::string right_str = stack->get_top(); stack->pop();
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Subtraction failed: stack underflow");
+    stack->push(right_str); // Push back the first number to maintain state
+    return;
+  }
+  std::string left_str = stack->get_top(); stack->pop();
+
   try {
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int right = std::stoi(stack->get_top()); stack->pop();
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int left = std::stoi(stack->get_top()); stack->pop();
+    int right = std::stoi(right_str);
+    int left = std::stoi(left_str);
     int difference = left - right;
     stack->push(std::to_string(difference));
     send_response(MessageType::OK);
   } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Operands must be integers for subtraction");
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
+    send_response(MessageType::ERROR, "Subtraction failed: non-numeric operands");
   }
 }
 
 void ClientConnection::handle_mul() {
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Multiplication failed: stack underflow");
+    return;
+  }
+  std::string first_str = stack->get_top(); stack->pop();
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Multiplication failed: stack underflow");
+    stack->push(first_str); // Restore stack state
+    return;
+  }
+  std::string second_str = stack->get_top(); stack->pop();
+
   try {
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int first = std::stoi(stack->get_top()); stack->pop();
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int second = std::stoi(stack->get_top()); stack->pop();
+    int first = std::stoi(first_str);
+    int second = std::stoi(second_str);
     int product = first * second;
     stack->push(std::to_string(product));
     send_response(MessageType::OK);
   } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Operands must be integers for multiplication");
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
+    send_response(MessageType::ERROR, "Multiplication failed: non-numeric operands");
   }
 }
 
 void ClientConnection::handle_div() {
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Division failed: stack underflow");
+    return;
+  }
+  std::string divisor_str = stack->get_top(); stack->pop();
+  if (stack->is_empty()) {
+    send_response(MessageType::ERROR, "Division failed: stack underflow");
+    stack->push(divisor_str); // Restore stack state
+    return;
+  }
+  std::string dividend_str = stack->get_top(); stack->pop();
+
   try {
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int divisor = std::stoi(stack->get_top()); stack->pop();
+    int divisor = std::stoi(divisor_str);
     if (divisor == 0) {
       send_response(MessageType::ERROR, "Division by zero");
       return;
     }
-    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-    int dividend = std::stoi(stack->get_top()); stack->pop();
+    int dividend = std::stoi(dividend_str);
     int quotient = dividend / divisor;
     stack->push(std::to_string(quotient));
     send_response(MessageType::OK);
   } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Operands must be integers for division");
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
+    send_response(MessageType::ERROR, "Division failed: non-numeric operands");
   }
 }
 
