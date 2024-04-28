@@ -96,21 +96,21 @@ void ClientConnection::handle_push(const Message &message) {
 }
 
 void ClientConnection::handle_pop() {
-    try {
-        stack->pop();
-        send_response(MessageType::OK);
-    } catch (const std::exception& ex) {
-        send_response(MessageType::ERROR, "Stack empty - Cannot pop");
-    }
+  try {
+    stack->pop();
+    send_response(MessageType::OK);
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
+  }
 }
 
 void ClientConnection::handle_top() {
-    try {
-        std::string topElement = stack->get_top();
-        send_response(MessageType::DATA, topElement);
-    } catch (const std::exception& ex) {
-        send_response(MessageType::ERROR, "Stack empty - No top element");
-    }
+  try {
+    std::string topValue = stack->get_top();
+    send_response(MessageType::DATA, topValue);
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
+  }
 }
 
 
