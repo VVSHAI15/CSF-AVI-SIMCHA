@@ -27,11 +27,14 @@ void ClientConnection::chat_with_client() {
     if (Rio_readlineb(&m_fdbuf, buf, MAXLINE) < 0) {
       throw CommException("Failed to read from client");
     }
-    MessageSerialization::decode(buf, message);
+    try {
+      MessageSerialization::decode(buf, message);
+    } catch (InvalidMessage &err) {
+    }
 
     if (!is_logged_in && message.get_message_type() != MessageType::LOGIN) {
       send_response(MessageType::ERROR, "Must login first");
-      continue; // Skip processing any command until logged in
+      break;
     }
 
     switch (message.get_message_type()) {
@@ -160,7 +163,7 @@ void ClientConnection::handle_login(const Message &message) {
     send_response(MessageType::ERROR, "Already logged in");
     return;
   }
-  // TODO
+
   is_logged_in = true;
   send_response(MessageType::OK);
 }
