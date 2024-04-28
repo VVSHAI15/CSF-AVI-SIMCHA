@@ -1,0 +1,21 @@
+Data Structures Requiring Synchronization
+
+Tables
+Tables are accessed and modified by multiple client connections concurrently. Operations such as set and get can lead to inconsistent data states if not properly managed, especially when they involve changes that should either fully succeed or fully revert (atomicity).
+
+Client Sessions
+Each client session maintains a state that includes login status, transaction status, and a stack for operations. This state must be protected to prevent unauthorized or unintended modifications that could stem from concurrent access.
+
+Synchronization Strategies
+
+Mutex Locks
+For each table, a mutex lock is used to synchronize access. The mutex ensures that only one thread can perform operations on the table data at a time, effectively preventing race conditions.
+Lock and Unlock: Standard pthread_mutex_lock and pthread_mutex_unlock are used in autocommit mode to wrap operations that read from or write to a table.
+TryLock: In transaction mode, pthread_mutex_trylock is utilized to attempt locking without blocking. If a lock cannot be immediately acquired, the transaction is rolled back to prevent deadlocks.
+
+Transaction Management
+We tried to manage transactions by maintaining a map of locked tables during a transaction. If a table lock is needed and cannot be acquired (checked via trylock), the transaction is aborted to prevent deadlocks and ensure all or nothing operation execution. If any part of the transaction fails (due to locking issues or operational exceptions), all changes are reverted, and all acquired locks are released.
+
+We were not able to get the transactions to work. When we tested it, we were getting inconsistent results. Sometimes all the transactions would work , sometimes none of them. There must have been a problem in the way that we dealt with locking. We tried many different implementations but ultimately couldn’t get it to work.
+
+Contributions: We pair coded all of MS2
