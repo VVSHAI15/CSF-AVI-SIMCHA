@@ -253,6 +253,7 @@ void ClientConnection::handle_create(const Message &message) {
   }
 }
 
+// Start a transaction
 void ClientConnection::handle_begin() {
     if (in_transaction) {
         send_response(MessageType::FAILED, "Transaction already started");
@@ -263,7 +264,13 @@ void ClientConnection::handle_begin() {
     }
 }
 
+// Commit a transaction
 void ClientConnection::handle_commit() {
+    if (!in_transaction) {
+        send_response(MessageType::FAILED, "No transaction to commit");
+        return;
+    }
+
     try {
         for (const auto& tableName : locked_tables) {
             Table* table = m_server->find_table(tableName);
@@ -276,11 +283,12 @@ void ClientConnection::handle_commit() {
         in_transaction = false;
         send_response(MessageType::OK);
     } catch (const std::exception& e) {
-        handle_rollback();  // Ensure all changes are rolled back if commit fails
+        handle_rollback();
         send_response(MessageType::FAILED, "Commit failed: " + std::string(e.what()));
     }
 }
 
+// Roll back a transaction
 void ClientConnection::handle_rollback() {
     for (const auto& tableName : locked_tables) {
         Table* table = m_server->find_table(tableName);
@@ -294,10 +302,11 @@ void ClientConnection::handle_rollback() {
     send_response(MessageType::OK, "Transaction rolled back");
 }
 
+// Handling setting a value in a table
 void ClientConnection::handle_set(const Message& message) {
     std::string tableName = message.get_table();
     std::string key = message.get_key();
-    std::string value = stack->get_top();  // Assuming value to set is on top of the stack
+    std::string value = stack->get_top();  // Assume value to set is on top of the stack
 
     Table* table = m_server->find_table(tableName);
     if (!table) {
@@ -334,6 +343,7 @@ void ClientConnection::handle_set(const Message& message) {
     }
 }
 
+// Handling retrieving a value from a table
 void ClientConnection::handle_get(const Message& message) {
     std::string tableName = message.get_table();
     std::string key = message.get_key();
@@ -371,7 +381,6 @@ void ClientConnection::handle_get(const Message& message) {
         send_response(MessageType::FAILED, e.what());
     }
 }
-
 
 void ClientConnection::send_response(MessageType type,
                                      const std::string &additional_info) {
