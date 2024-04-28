@@ -30,8 +30,8 @@ void ClientConnection::chat_with_client() {
     try {
       MessageSerialization::decode(buf, message);
     } catch (InvalidMessage &err) {
-      send_response(MessageType::ERROR, err.what());
-      continue;
+      send_response(MessageType::FAILED, err.what());
+      break;
     }
 
     if (!is_logged_in && message.get_message_type() != MessageType::LOGIN) {
