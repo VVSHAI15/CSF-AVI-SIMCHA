@@ -253,18 +253,47 @@ void ClientConnection::handle_create(const Message &message) {
   }
 }
 
-
 void ClientConnection::handle_begin() {
-  if (in_transaction) {
-    send_response(MessageType::FAILED, "Transaction already started");
-  } else {
-    in_transaction = true;
-    locked_tables.clear(); // Ensure no tables are marked as locked at the start
-    send_response(MessageType::OK);
-  }
+    if (in_transaction) {
+        send_response(MessageType::FAILED, "Transaction already started");
+    } else {
+        in_transaction = true;
+        locked_tables.clear();
+        send_response(MessageType::OK);
+    }
 }
 
-// Handle setting a value in a table
+void ClientConnection::handle_commit() {
+    try {
+        for (const auto& tableName : locked_tables) {
+            Table* table = m_server->find_table(tableName);
+            if (table) {
+                table->commit_changes();
+                table->unlock();
+            }
+        }
+        locked_tables.clear();
+        in_transaction = false;
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        handle_rollback();
+        send_response(MessageType::FAILED, e.what());
+    }
+}
+
+void ClientConnection::handle_rollback() {
+    for (const auto& tableName : locked_tables) {
+        Table* table = m_server->find_table(tableName);
+        if (table) {
+            table->rollback_changes();
+            table->unlock();
+        }
+    }
+    locked_tables.clear();
+    in_transaction = false;
+    send_response(MessageType::FAILED, "Transaction rolled back");
+}
+
 void ClientConnection::handle_set(const Message& message) {
     std::string tableName = message.get_table();
     std::string key = message.get_key();
@@ -305,7 +334,6 @@ void ClientConnection::handle_set(const Message& message) {
     }
 }
 
-// Handle retrieving a value from a table
 void ClientConnection::handle_get(const Message& message) {
     std::string tableName = message.get_table();
     std::string key = message.get_key();
@@ -342,44 +370,6 @@ void ClientConnection::handle_get(const Message& message) {
         }
         send_response(MessageType::FAILED, e.what());
     }
-}
-
-// Handle committing a transaction
-void ClientConnection::handle_commit() {
-    if (!in_transaction) {
-        send_response(MessageType::FAILED, "No transaction to commit");
-        return;
-    }
-
-    try {
-        for (const auto& tableName : locked_tables) {
-            Table* table = m_server->find_table(tableName);
-            if (table) {
-                table->commit_changes();
-                table->unlock();
-            }
-        }
-        locked_tables.clear();
-        in_transaction = false;
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        handle_rollback();
-        send_response(MessageType::FAILED, e.what());
-    }
-}
-
-// Handle rolling back a transaction
-void ClientConnection::handle_rollback() {
-    for (const auto& tableName : locked_tables) {
-        Table* table = m_server->find_table(tableName);
-        if (table) {
-            table->rollback_changes();
-            table->unlock();
-        }
-    }
-    locked_tables.clear();
-    in_transaction = false;
-    send_response(MessageType::FAILED, "Transaction rolled back");
 }
 
 
