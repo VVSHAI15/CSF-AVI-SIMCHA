@@ -6,6 +6,8 @@
 #include "server.h"
 #include <cassert>
 #include <iostream>
+#include "../../../../../usr/include/c++/13/bits/algorithmfwd.h"
+#include <algorithm>
 
 ClientConnection::ClientConnection(Server *server, int client_fd)
     : m_server(server), m_client_fd(client_fd), in_transaction(false),
@@ -96,121 +98,115 @@ void ClientConnection::handle_push(const Message &message) {
 }
 
 void ClientConnection::handle_pop() {
-  try {
-    stack->pop();
-    send_response(MessageType::OK);
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
-  }
+    try {
+        if (stack->is_empty()) throw OperationException("Stack empty");
+        stack->pop();
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
+    }
 }
 
 void ClientConnection::handle_top() {
-  try {
-    std::string topValue = stack->get_top();
-    send_response(MessageType::DATA, topValue);
-  } catch (const OperationException& e) {
-    send_response(MessageType::ERROR, e.what());
-  }
+    try {
+        if (stack->is_empty()) throw OperationException("Stack empty");
+        std::string topValue = stack->get_top();
+        send_response(MessageType::DATA, topValue);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
+    }
 }
 
+bool ClientConnection::isNumeric(const std::string& str) {
+    return std::all_of(str.begin(), str.end(), [](char c) { return std::isdigit(c) || c == '-'; });
+}
 void ClientConnection::handle_add() {
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Addition failed: stack underflow");
-    return;
-  }
-  std::string num1_str = stack->get_top(); stack->pop();
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Addition failed: stack underflow");
-    stack->push(num1_str); // Push back the first number to maintain state
-    return;
-  }
-  std::string num2_str = stack->get_top(); stack->pop();
+    try {
+        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+        std::string num1_str = stack->get_top();
+        if (!isNumeric(num1_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop(); // Pop after validation
 
-  try {
-    int num1 = std::stoi(num1_str);
-    int num2 = std::stoi(num2_str);
-    int sum = num1 + num2;
-    stack->push(std::to_string(sum));
-    send_response(MessageType::OK);
-  } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Addition failed: non-numeric operands");
-  }
+        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for addition");
+        std::string num2_str = stack->get_top();
+        if (!isNumeric(num2_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop(); // Pop after validation
+
+        int num1 = std::stoi(num1_str);
+        int num2 = std::stoi(num2_str);
+        int sum = num1 + num2;
+        stack->push(std::to_string(sum));
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
+    }
 }
 
 void ClientConnection::handle_sub() {
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Subtraction failed: stack underflow");
-    return;
-  }
-  std::string right_str = stack->get_top(); stack->pop();
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Subtraction failed: stack underflow");
-    stack->push(right_str); // Push back the first number to maintain state
-    return;
-  }
-  std::string left_str = stack->get_top(); stack->pop();
+    try {
+        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+        std::string right_str = stack->get_top();
+        if (!isNumeric(right_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop();
 
-  try {
-    int right = std::stoi(right_str);
-    int left = std::stoi(left_str);
-    int difference = left - right;
-    stack->push(std::to_string(difference));
-    send_response(MessageType::OK);
-  } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Subtraction failed: non-numeric operands");
-  }
+        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for subtraction");
+        std::string left_str = stack->get_top();
+        if (!isNumeric(left_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop();
+
+        int right = std::stoi(right_str);
+        int left = std::stoi(left_str);
+        int difference = left - right;
+        stack->push(std::to_string(difference));
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
+    }
 }
 
 void ClientConnection::handle_mul() {
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Multiplication failed: stack underflow");
-    return;
-  }
-  std::string first_str = stack->get_top(); stack->pop();
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Multiplication failed: stack underflow");
-    stack->push(first_str); // Restore stack state
-    return;
-  }
-  std::string second_str = stack->get_top(); stack->pop();
+    try {
+        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+        std::string first_str = stack->get_top();
+        if (!isNumeric(first_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop();
 
-  try {
-    int first = std::stoi(first_str);
-    int second = std::stoi(second_str);
-    int product = first * second;
-    stack->push(std::to_string(product));
-    send_response(MessageType::OK);
-  } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Multiplication failed: non-numeric operands");
-  }
+        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for multiplication");
+        std::string second_str = stack->get_top();
+        if (!isNumeric(second_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop();
+
+        int first = std::stoi(first_str);
+        int second = std::stoi(second_str);
+        int product = first * second;
+        stack->push(std::to_string(product));
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
+    }
 }
 
 void ClientConnection::handle_div() {
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Division failed: stack underflow");
-    return;
-  }
-  std::string divisor_str = stack->get_top(); stack->pop();
-  if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Division failed: stack underflow");
-    stack->push(divisor_str); // Restore stack state
-    return;
-  }
-  std::string dividend_str = stack->get_top(); stack->pop();
+    try {
+        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+        std::string divisor_str = stack->get_top();
+        if (!isNumeric(divisor_str)) throw std::invalid_argument("Non-numeric operand or division by zero");
+        if (std::stoi(divisor_str) == 0) throw std::invalid_argument("Division by zero");
+        stack->pop();
 
-  try {
-    int divisor = std::stoi(divisor_str);
-    if (divisor == 0) {
-      send_response(MessageType::ERROR, "Division by zero");
-      return;
+        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for division");
+        std::string dividend_str = stack->get_top();
+        if (!isNumeric(dividend_str)) throw std::invalid_argument("Non-numeric operand");
+        stack->pop();
+
+        int divisor = std::stoi(divisor_str);
+        int dividend = std::stoi(dividend_str);
+        int quotient = dividend / divisor;
+        stack->push(std::to_string(quotient));
+        send_response(MessageType::OK);
+    } catch (const std::exception& e) {
+        send_response(MessageType::ERROR, e.what());
     }
-    int dividend = std::stoi(dividend_str);
-    int quotient = dividend / divisor;
-    stack->push(std::to_string(quotient));
-    send_response(MessageType::OK);
-  } catch (const std::invalid_argument& e) {
-    send_response(MessageType::ERROR, "Division failed: non-numeric operands");
-  }
 }
 
 
