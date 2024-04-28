@@ -57,7 +57,7 @@ void *Server::client_worker(void *arg) {
   try {
     client->chat_with_client();
   } catch (CommException &ex) { // Just in case of a communication error
-    client->handle_exceptions(ex);
+    // client->handle_exceptions(ex); //TODO figure this out!!!!!
   }
   close(client->get_client_fd());
   return nullptr;
