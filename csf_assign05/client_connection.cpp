@@ -381,3 +381,12 @@ void ClientConnection::handle_rollback() {
     in_transaction = false;
     send_response(MessageType::FAILED, "Transaction rolled back");
 }
+
+
+void ClientConnection::send_response(MessageType type,
+                                     const std::string &additional_info) {
+  Message response(type, {additional_info});
+  std::string encoded;
+  MessageSerialization::encode(response, encoded);
+  rio_writen(m_client_fd, encoded.data(), encoded.size());
+}
