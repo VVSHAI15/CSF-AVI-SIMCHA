@@ -4,10 +4,9 @@
 #include "message.h"
 #include "message_serialization.h"
 #include "server.h"
+#include <algorithm>
 #include <cassert>
 #include <iostream>
-#include "../../../../../usr/include/c++/13/bits/algorithmfwd.h"
-#include <algorithm>
 
 ClientConnection::ClientConnection(Server *server, int client_fd)
     : m_server(server), m_client_fd(client_fd), in_transaction(false),
@@ -32,7 +31,7 @@ void ClientConnection::chat_with_client() {
     try {
       MessageSerialization::decode(buf, message);
     } catch (InvalidMessage &err) {
-      send_response(MessageType::FAILED, err.what());
+      send_response(MessageType::ERROR, err.what());
       break;
     }
 
@@ -98,117 +97,141 @@ void ClientConnection::handle_push(const Message &message) {
 }
 
 void ClientConnection::handle_pop() {
-    try {
-        if (stack->is_empty()) throw OperationException("Stack empty");
-        stack->pop();
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Stack empty\"");
+    stack->pop();
+    send_response(MessageType::OK);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
 
 void ClientConnection::handle_top() {
-    try {
-        if (stack->is_empty()) throw OperationException("Stack empty");
-        std::string topValue = stack->get_top();
-        send_response(MessageType::DATA, topValue);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Stack empty\"");
+    std::string topValue = stack->get_top();
+    send_response(MessageType::DATA, topValue);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
 
-bool ClientConnection::isNumeric(const std::string& str) {
-    return std::all_of(str.begin(), str.end(), [](char c) { return std::isdigit(c) || c == '-'; });
+bool ClientConnection::isNumeric(const std::string &str) {
+  return std::all_of(str.begin(), str.end(),
+                     [](char c) { return std::isdigit(c) || c == '-'; });
 }
 void ClientConnection::handle_add() {
-    try {
-        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-        std::string num1_str = stack->get_top();
-        if (!isNumeric(num1_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop(); // Pop after validation
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Not enough operands on stack\"");
+    std::string num1_str = stack->get_top();
+    if (!isNumeric(num1_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop(); // Pop after validation
 
-        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for addition");
-        std::string num2_str = stack->get_top();
-        if (!isNumeric(num2_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop(); // Pop after validation
+    if (stack->is_empty())
+      throw OperationException(
+          "\"Stack underflow on second operand for addition\"");
+    std::string num2_str = stack->get_top();
+    if (!isNumeric(num2_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop(); // Pop after validation
 
-        int num1 = std::stoi(num1_str);
-        int num2 = std::stoi(num2_str);
-        int sum = num1 + num2;
-        stack->push(std::to_string(sum));
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+    int num1 = std::stoi(num1_str);
+    int num2 = std::stoi(num2_str);
+    int sum = num1 + num2;
+    stack->push(std::to_string(sum));
+    send_response(MessageType::OK);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
 
 void ClientConnection::handle_sub() {
-    try {
-        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-        std::string right_str = stack->get_top();
-        if (!isNumeric(right_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop();
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Not enough operands on stack\"");
+    std::string right_str = stack->get_top();
+    if (!isNumeric(right_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop();
 
-        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for subtraction");
-        std::string left_str = stack->get_top();
-        if (!isNumeric(left_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop();
+    if (stack->is_empty())
+      throw OperationException(
+          "Stack underflow on second operand for subtraction");
+    std::string left_str = stack->get_top();
+    if (!isNumeric(left_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop();
 
-        int right = std::stoi(right_str);
-        int left = std::stoi(left_str);
-        int difference = left - right;
-        stack->push(std::to_string(difference));
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+    int right = std::stoi(right_str);
+    int left = std::stoi(left_str);
+    int difference = left - right;
+    stack->push(std::to_string(difference));
+    send_response(MessageType::OK);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
 
 void ClientConnection::handle_mul() {
-    try {
-        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-        std::string first_str = stack->get_top();
-        if (!isNumeric(first_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop();
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Not enough operands on stack\"");
+    std::string first_str = stack->get_top();
+    if (!isNumeric(first_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop();
 
-        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for multiplication");
-        std::string second_str = stack->get_top();
-        if (!isNumeric(second_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop();
+    if (stack->is_empty())
+      throw OperationException(
+          "Stack underflow on second operand for multiplication");
+    std::string second_str = stack->get_top();
+    if (!isNumeric(second_str))
+      throw std::invalid_argument("Non-numeric operand");
+    stack->pop();
 
-        int first = std::stoi(first_str);
-        int second = std::stoi(second_str);
-        int product = first * second;
-        stack->push(std::to_string(product));
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+    int first = std::stoi(first_str);
+    int second = std::stoi(second_str);
+    int product = first * second;
+    stack->push(std::to_string(product));
+    send_response(MessageType::OK);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
 
 void ClientConnection::handle_div() {
-    try {
-        if (stack->is_empty()) throw OperationException("Not enough operands on stack");
-        std::string divisor_str = stack->get_top();
-        if (!isNumeric(divisor_str)) throw std::invalid_argument("Non-numeric operand or division by zero");
-        if (std::stoi(divisor_str) == 0) throw std::invalid_argument("Division by zero");
-        stack->pop();
+  try {
+    if (stack->is_empty())
+      throw OperationException("\"Not enough operands on stack\"");
+    std::string divisor_str = stack->get_top();
+    if (!isNumeric(divisor_str))
+      throw std::invalid_argument(
+          "\"Non-numeric operand or division by zero\"");
+    if (std::stoi(divisor_str) == 0)
+      throw std::invalid_argument("\"Division by zero\"");
+    stack->pop();
 
-        if (stack->is_empty()) throw OperationException("Stack underflow on second operand for division");
-        std::string dividend_str = stack->get_top();
-        if (!isNumeric(dividend_str)) throw std::invalid_argument("Non-numeric operand");
-        stack->pop();
+    if (stack->is_empty())
+      throw OperationException(
+          "\"Stack underflow on second operand for division\"");
+    std::string dividend_str = stack->get_top();
+    if (!isNumeric(dividend_str))
+      throw std::invalid_argument("\"Non-numeric operand\"");
+    stack->pop();
 
-        int divisor = std::stoi(divisor_str);
-        int dividend = std::stoi(dividend_str);
-        int quotient = dividend / divisor;
-        stack->push(std::to_string(quotient));
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        send_response(MessageType::ERROR, e.what());
-    }
+    int divisor = std::stoi(divisor_str);
+    int dividend = std::stoi(dividend_str);
+    int quotient = dividend / divisor;
+    stack->push(std::to_string(quotient));
+    send_response(MessageType::OK);
+  } catch (const std::exception &e) {
+    send_response(MessageType::FAILED, e.what());
+  }
 }
-
 
 void ClientConnection::handle_login(const Message &message) {
   if (is_logged_in) {
@@ -236,7 +259,7 @@ void ClientConnection::handle_set(const Message &message) {
 
   // Check if the stack has elements before trying to pop
   if (stack->is_empty()) {
-    send_response(MessageType::ERROR, "Stack is empty, cannot set value");
+    send_response(MessageType::FAILED, "Stack is empty, cannot set value");
     return;
   }
 
