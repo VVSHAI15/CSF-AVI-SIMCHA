@@ -253,133 +253,46 @@ void ClientConnection::handle_create(const Message &message) {
   }
 }
 
-// Start a transaction
+
 void ClientConnection::handle_begin() {
-    if (in_transaction) {
-        send_response(MessageType::FAILED, "Transaction already started");
-    } else {
-        in_transaction = true;
-        locked_tables.clear();
-        send_response(MessageType::OK);
-    }
+  if (in_transaction) {
+    send_response(MessageType::FAILED, "Transaction already started");
+  } else {
+    in_transaction = true;
+    locked_tables.clear();  // Clear previous transaction state
+    send_response(MessageType::OK);
+  }
 }
 
-// Commit a transaction
 void ClientConnection::handle_commit() {
-    if (!in_transaction) {
-        send_response(MessageType::FAILED, "No transaction to commit");
-        return;
-    }
-
-    try {
-        for (const auto& tableName : locked_tables) {
-            Table* table = m_server->find_table(tableName);
-            if (table) {
-                table->commit_changes();
-                table->unlock();
-            }
-        }
-        locked_tables.clear();
-        in_transaction = false;
-        send_response(MessageType::OK);
-    } catch (const std::exception& e) {
-        handle_rollback();
-        send_response(MessageType::FAILED, "Commit failed: " + std::string(e.what()));
-    }
-}
-
-// Roll back a transaction
-void ClientConnection::handle_rollback() {
+  try {
     for (const auto& tableName : locked_tables) {
-        Table* table = m_server->find_table(tableName);
-        if (table) {
-            table->rollback_changes();
-            table->unlock();
-        }
+      Table* table = m_server->find_table(tableName);
+      if (table) {
+        table->commit_changes();  // Commit all changes made during the transaction
+        table->unlock();  // Unlock the table
+      }
     }
     locked_tables.clear();
     in_transaction = false;
-    send_response(MessageType::OK, "Transaction rolled back");
+    send_response(MessageType::OK);
+  } catch (const std::exception& e) {
+    handle_rollback();  // Rollback on failure to commit
+    send_response(MessageType::FAILED, "Commit failed: " + std::string(e.what()));
+  }
 }
 
-// Handling setting a value in a table
-void ClientConnection::handle_set(const Message& message) {
-    std::string tableName = message.get_table();
-    std::string key = message.get_key();
-    std::string value = stack->get_top();  // Assume value to set is on top of the stack
-
+void ClientConnection::handle_rollback() {
+  for (const auto& tableName : locked_tables) {
     Table* table = m_server->find_table(tableName);
-    if (!table) {
-        send_response(MessageType::ERROR, "Table not found");
-        return;
+    if (table) {
+      table->rollback_changes();  // Discard all changes
+      table->unlock();  // Unlock the table
     }
-
-    try {
-        if (in_transaction) {
-            if (locked_tables.find(tableName) == locked_tables.end()) {
-                if (!table->trylock()) {
-                    handle_rollback();  // Roll back if we cannot lock the table
-                    send_response(MessageType::FAILED, "Failed to lock table, transaction rolled back");
-                    return;
-                }
-                locked_tables.insert(tableName);
-            }
-        } else {
-            table->lock();
-        }
-
-        table->set(key, value, in_transaction);
-        send_response(MessageType::OK);
-        if (!in_transaction) {
-            table->unlock();
-        }
-    } catch (const std::exception& e) {
-        if (in_transaction) {
-            handle_rollback();
-        } else {
-            table->unlock();
-        }
-        send_response(MessageType::FAILED, e.what());
-    }
-}
-
-// Handling retrieving a value from a table
-void ClientConnection::handle_get(const Message& message) {
-    std::string tableName = message.get_table();
-    std::string key = message.get_key();
-
-    Table* table = m_server->find_table(tableName);
-    if (!table) {
-        send_response(MessageType::ERROR, "Table not found");
-        return;
-    }
-
-    try {
-        if (in_transaction && locked_tables.find(tableName) == locked_tables.end()) {
-            if (!table->trylock()) {
-                handle_rollback();
-                send_response(MessageType::FAILED, "Failed to lock table, transaction rolled back");
-                return;
-            }
-            locked_tables.insert(tableName);
-        } else {
-            table->lock();
-        }
-
-        std::string value = table->get(key, in_transaction);
-        stack->push(value);
-        send_response(MessageType::OK);
-        if (!in_transaction) {
-            table->unlock();
-        }
-    } catch (const std::exception& e) {
-        if (in_transaction) {
-            handle_rollback();
-        } else {
-            table->unlock();
-        }
-        send_response(MessageType::FAILED, e.what());
-    }
+  }
+  locked_tables.clear();
+  in_transaction = false;
+  send_response(MessageType::OK, "Transaction rolled back");
 }
 
 void ClientConnection::send_response(MessageType type,
