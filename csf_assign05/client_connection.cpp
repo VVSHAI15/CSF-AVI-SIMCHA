@@ -276,8 +276,8 @@ void ClientConnection::handle_commit() {
         in_transaction = false;
         send_response(MessageType::OK);
     } catch (const std::exception& e) {
-        handle_rollback();
-        send_response(MessageType::FAILED, e.what());
+        handle_rollback();  // Ensure all changes are rolled back if commit fails
+        send_response(MessageType::FAILED, "Commit failed: " + std::string(e.what()));
     }
 }
 
@@ -291,7 +291,7 @@ void ClientConnection::handle_rollback() {
     }
     locked_tables.clear();
     in_transaction = false;
-    send_response(MessageType::FAILED, "Transaction rolled back");
+    send_response(MessageType::OK, "Transaction rolled back");
 }
 
 void ClientConnection::handle_set(const Message& message) {
@@ -309,7 +309,7 @@ void ClientConnection::handle_set(const Message& message) {
         if (in_transaction) {
             if (locked_tables.find(tableName) == locked_tables.end()) {
                 if (!table->trylock()) {
-                    handle_rollback();
+                    handle_rollback();  // Roll back if we cannot lock the table
                     send_response(MessageType::FAILED, "Failed to lock table, transaction rolled back");
                     return;
                 }
