@@ -115,52 +115,73 @@ void ClientConnection::handle_top() {
 
 
 void ClientConnection::handle_add() {
-  // must check the stack has 2 left
-  int num1 = std::stoi(stack->get_top());
-  stack->pop();
-  int num2 = std::stoi(stack->get_top());
-  stack->pop();
-  int sum = num1 + num2;
-  stack->push(std::to_string(sum));
-  send_response(MessageType::OK);
+  try {
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int num1 = std::stoi(stack->get_top()); stack->pop();
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int num2 = std::stoi(stack->get_top()); stack->pop();
+    int sum = num1 + num2;
+    stack->push(std::to_string(sum));
+    send_response(MessageType::OK);
+  } catch (const std::invalid_argument& e) {
+    send_response(MessageType::ERROR, "Operands must be integers for addition");
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
+  }
 }
 
 void ClientConnection::handle_sub() {
-  // must check the stack has 2 left
-  int right = std::stoi(stack->get_top());
-  stack->pop();
-  int left = std::stoi(stack->get_top());
-  stack->pop();
-  int difference = left - right;
-  stack->push(std::to_string(difference));
-  send_response(MessageType::OK);
+  try {
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int right = std::stoi(stack->get_top()); stack->pop();
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int left = std::stoi(stack->get_top()); stack->pop();
+    int difference = left - right;
+    stack->push(std::to_string(difference));
+    send_response(MessageType::OK);
+  } catch (const std::invalid_argument& e) {
+    send_response(MessageType::ERROR, "Operands must be integers for subtraction");
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
+  }
 }
 
 void ClientConnection::handle_mul() {
-  // must check the stack has 2 left
-  int first = std::stoi(stack->get_top());
-  stack->pop();
-  int second = std::stoi(stack->get_top());
-  stack->pop();
-  int product = first * second;
-  stack->push(std::to_string(product));
-  send_response(MessageType::OK);
+  try {
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int first = std::stoi(stack->get_top()); stack->pop();
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int second = std::stoi(stack->get_top()); stack->pop();
+    int product = first * second;
+    stack->push(std::to_string(product));
+    send_response(MessageType::OK);
+  } catch (const std::invalid_argument& e) {
+    send_response(MessageType::ERROR, "Operands must be integers for multiplication");
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
+  }
 }
 
 void ClientConnection::handle_div() {
-  // we must check the stack has 2 left
-  int divisor = std::stoi(stack->get_top());
-  stack->pop();
-  if (divisor == 0) {
-    send_response(MessageType::ERROR, "Division by zero");
-    return;
+  try {
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int divisor = std::stoi(stack->get_top()); stack->pop();
+    if (divisor == 0) {
+      send_response(MessageType::ERROR, "Division by zero");
+      return;
+    }
+    if (stack->is_empty()) throw OperationException("Not enough operands on stack");
+    int dividend = std::stoi(stack->get_top()); stack->pop();
+    int quotient = dividend / divisor;
+    stack->push(std::to_string(quotient));
+    send_response(MessageType::OK);
+  } catch (const std::invalid_argument& e) {
+    send_response(MessageType::ERROR, "Operands must be integers for division");
+  } catch (const OperationException& e) {
+    send_response(MessageType::ERROR, e.what());
   }
-  int dividend = std::stoi(stack->get_top());
-  stack->pop();
-  int quotient = dividend / divisor;
-  stack->push(std::to_string(quotient));
-  send_response(MessageType::OK);
 }
+
 
 void ClientConnection::handle_login(const Message &message) {
   if (is_logged_in) {
