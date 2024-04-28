@@ -43,7 +43,7 @@ private:
   void send_response(MessageType type, const std::string &additional_info = "");
   void handle_exceptions(const std::string &error, bool ongoing);
   bool isNumeric(const std::string &str);
-  void rollback_transaction();
+  void handle_rollback();
 };
 
 #endif // CLIENT_CONNECTION_H
