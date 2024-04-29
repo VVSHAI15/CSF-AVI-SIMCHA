@@ -1,4 +1,3 @@
-
 #include "client_connection.h"
 #include "csapp.h"
 #include "exceptions.h"
@@ -9,20 +8,23 @@
 #include <cassert>
 #include <iostream>
 
+// Constructor for ClientConnection: Initializes connection settings and state.
 ClientConnection::ClientConnection(Server *server, int client_fd)
     : m_server(server), m_client_fd(client_fd), in_transaction(false),
-      stack(new ValueStack()), is_logged_in(false) { // Initialize it as false
+      stack(new ValueStack()), is_logged_in(false) {
   rio_readinitb(&m_fdbuf, m_client_fd);
 }
 
+// Destructor: Ensures that resources are properly released when a
+// ClientConnection is destroyed.
 ClientConnection::~ClientConnection() {
   Close(m_client_fd);
   delete stack;
 }
 
+// Main communication loop handling messages from the client.
 void ClientConnection::chat_with_client() {
   bool ongoing = true;
-
   while (ongoing) {
     Message message;
     char buf[MAXLINE];
@@ -36,11 +38,13 @@ void ClientConnection::chat_with_client() {
       break;
     }
 
+    // Ensure the user is logged in before proceeding with other commands.
     if (!is_logged_in && message.get_message_type() != MessageType::LOGIN) {
       send_response(MessageType::ERROR, "Must login first");
       break;
     }
 
+    // Handle different types of messages based on their type.
     switch (message.get_message_type()) {
     case MessageType::LOGIN:
       handle_login(message);
@@ -82,7 +86,8 @@ void ClientConnection::chat_with_client() {
       handle_commit();
       break;
     case MessageType::BYE:
-      ongoing = false;
+      ongoing =
+          false; // End the communication loop if "BYE" message is received.
       send_response(MessageType::OK);
       break;
     default:
@@ -92,11 +97,14 @@ void ClientConnection::chat_with_client() {
   }
 }
 
+// Handles pushing a value onto the client's stack.
 void ClientConnection::handle_push(const Message &message) {
   stack->push(message.get_value());
   send_response(MessageType::OK);
 }
 
+// Handles popping the top value from the stack and handling exceptions if the
+// stack is empty.
 void ClientConnection::handle_pop() {
   try {
     if (stack->is_empty())
@@ -108,6 +116,7 @@ void ClientConnection::handle_pop() {
   }
 }
 
+// Handles retrieving and sending the top value of the stack.
 void ClientConnection::handle_top() {
   try {
     if (stack->is_empty())
@@ -119,6 +128,7 @@ void ClientConnection::handle_top() {
   }
 }
 
+// Utility function to check if a string is numeric.
 bool ClientConnection::isNumeric(const std::string &str) {
   return std::all_of(str.begin(), str.end(),
                      [](char c) { return std::isdigit(c) || c == '-'; });
@@ -262,7 +272,6 @@ void ClientConnection::handle_set(const Message &message) {
     send_response(MessageType::FAILED, "Stack is empty, cannot set value");
     return;
   }
-
   std::string value = stack->get_top();
   stack->pop();
 
@@ -372,5 +381,17 @@ void ClientConnection::send_response(MessageType type,
   Message response(type, {additional_info});
   std::string encoded;
   MessageSerialization::encode(response, encoded);
-  rio_writen(m_client_fd, encoded.data(), encoded.size());
+
+  ssize_t num_bytes_written =
+      rio_writen(m_client_fd, encoded.data(), encoded.size());
+
+  if (num_bytes_written < 0) {
+    // Handle the error case where writing fails
+    throw CommException("Failed to write to client");
+  }
+
+  if (static_cast<size_t>(num_bytes_written) != encoded.size()) {
+    // Handle the case where not all bytes were written
+    throw CommException("Incomplete write to client");
+  }
 }
