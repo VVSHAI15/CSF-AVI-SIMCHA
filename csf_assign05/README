@@ -16,6 +16,6 @@ TryLock: In transaction mode, pthread_mutex_trylock is utilized to attempt locki
 Transaction Management
 We tried to manage transactions by maintaining a map of locked tables during a transaction. If a table lock is needed and cannot be acquired (checked via trylock), the transaction is aborted to prevent deadlocks and ensure all or nothing operation execution. If any part of the transaction fails (due to locking issues or operational exceptions), all changes are reverted, and all acquired locks are released.
 
-We were not able to get the transactions to work. When we tested it, we were getting inconsistent results. Sometimes all the transactions would work , sometimes none of them. There must have been a problem in the way that we dealt with locking. We tried many different implementations but ultimately couldn’t get it to work.
+We were not able to get the transactions to work. When we tested it, we were getting inconsistent results. Sometimes all the transactions would work , sometimes none of them. There must have been a problem in the way that we dealt with locking. We tried many different implementations but ultimately couldn’t get it to work. Additionally, sometimes the server was randomly shutting down. 
 
 Contributions: We pair coded all of MS2

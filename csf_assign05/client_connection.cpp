@@ -254,34 +254,44 @@ void ClientConnection::handle_login(const Message &message) {
   send_response(MessageType::OK);
 }
 
+// Handles the creation of a new table on the server.
 void ClientConnection::handle_create(const Message &message) {
   std::string tableName = message.get_table();
+  // Check if the table already exists on the server
   if (m_server->find_table(tableName)) {
+    // If the table exists, inform the client of the failure
     send_response(MessageType::FAILED, {"Table already exists"});
   } else {
+    // If the table does not exist, create it and confirm creation to the client
     m_server->create_table(tableName);
     send_response(MessageType::OK, {});
   }
 }
 
+// Handles setting a value in a specified table, possibly within a transaction
 void ClientConnection::handle_set(const Message &message) {
   std::string tableName = message.get_table();
   std::string key = message.get_key();
 
+  // Check if there's data on the stack to set
   if (stack->is_empty()) {
     send_response(MessageType::FAILED, "Stack is empty, cannot set value");
     return;
   }
+
+  // Retrieve value from the stack to be set in the table
   std::string value = stack->get_top();
-  stack->pop();
+  stack->pop(); // Remove the value from the stack after use
 
   Table *table = m_server->find_table(tableName);
+  // Check if the table exists
   if (!table) {
     send_response(MessageType::ERROR, "Table not found");
     return;
   }
 
   try {
+    // Check transaction status and lock table accordingly
     if (in_transaction) {
       if (!locked_tables.count(tableName)) {
         if (!table->trylock()) {
@@ -290,16 +300,18 @@ void ClientConnection::handle_set(const Message &message) {
         }
         locked_tables.insert(tableName);
       }
-      table->set(key, value, true); // Stage changes if in a transaction
+      // Set value in the table with changes staged for transaction
+      table->set(key, value, true);
     } else {
+      // Directly modify the table data outside of a transaction
       table->lock();
-      table->set(
-          key, value,
-          false); // Directly modify the main data if not in a transaction
+      table->set(key, value, false);
       table->unlock();
     }
     send_response(MessageType::OK);
   } catch (const std::exception &e) {
+    // Handle exceptions by sending error messages and rolling back transactions
+    // if necessary
     send_response(MessageType::FAILED, e.what());
     if (in_transaction) {
       rollback_transaction();
@@ -307,75 +319,87 @@ void ClientConnection::handle_set(const Message &message) {
   }
 }
 
+// Retrieves a value from a table and sends it to the client
 void ClientConnection::handle_get(const Message &message) {
   std::string tableName = message.get_table();
   std::string key = message.get_key();
   Table *table = m_server->find_table(tableName);
+  // Ensure the table exists
   if (!table) {
     send_response(MessageType::ERROR, "Table not found");
     return;
   }
 
   try {
+    // Lock the table, retrieve the value, and then unlock
     table->lock();
     std::string value = table->get(key, in_transaction);
     stack->push(value);
     table->unlock();
     send_response(MessageType::OK, {});
   } catch (const std::exception &e) {
+    // If an exception occurs, unlock the table and send an error response
     table->unlock();
     send_response(MessageType::FAILED, e.what());
   }
 }
 
+// Begins a new transaction by setting the appropriate flags
 void ClientConnection::handle_begin() {
   if (in_transaction) {
+    // Send an error if a transaction is already active
     send_response(MessageType::FAILED, "Transaction already started");
   } else {
+    // Start a new transaction and clear any previously tracked tables
     in_transaction = true;
-    locked_tables.clear(); // Ensure no tables are marked as locked at the start
+    locked_tables.clear();
     send_response(MessageType::OK);
   }
 }
-
+// Commits all changes made during the current transaction
 void ClientConnection::handle_commit() {
   if (!in_transaction) {
+    // If no transaction is active, send an error
     send_response(MessageType::FAILED, "No transaction is active");
     return;
   }
 
   try {
-    // Commit changes for all involved tables
+    // Commit changes for all tables involved in the transaction and unlock them
     for (const auto &tableName : locked_tables) {
       Table *table = m_server->find_table(tableName);
       if (table) {
-        table->commit_changes(); // Commit staged changes to the main data
-        table->unlock();         // Unlock the table after commit
+        table->commit_changes();
+        table->unlock();
       }
     }
+    // Clear the list of locked tables and mark the transaction as complete
     locked_tables.clear();
     in_transaction = false;
     send_response(MessageType::OK);
   } catch (const std::exception &e) {
-    // If commit fails, roll back all changes
+    // If committing fails, roll back all changes and inform the client
     rollback_transaction();
     send_response(MessageType::FAILED, e.what());
   }
 }
 
+// Rolls back any changes made during the current transaction
 void ClientConnection::rollback_transaction() {
   for (const auto &tableName : locked_tables) {
     Table *table = m_server->find_table(tableName);
     if (table) {
-      table->rollback_changes(); // Discard staged changes
-      table->unlock();           // Unlock the table after rollback
+      // Discard any staged changes and unlock the table
+      table->rollback_changes();
+      table->unlock();
     }
   }
+  // Clear the list of locked tables and mark the transaction as not active
   locked_tables.clear();
   in_transaction = false;
+  // Inform the client that the transaction has been rolled back successfully
   send_response(MessageType::OK);
 }
-
 void ClientConnection::send_response(MessageType type,
                                      const std::string &additional_info) {
   Message response(type, {additional_info});
